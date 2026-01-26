@@ -17,7 +17,7 @@ st.markdown("""
 @st.cache_data
 def load_data():
     # Carrega o arquivo ignorando erros de linhas malformadas
-    df = pd.read_csv('dados.csv', on_bad_lines='skip')
+    df = pd.read_csv('dados', on_bad_lines='skip')
     
     # Limpeza para a Linha do Tempo (Anos 2014 a 2023)
     # Procuramos as linhas onde a primeira coluna parece um ano
@@ -53,9 +53,9 @@ st.write("Monitoramento da Leishmaniose Visceral | Belo Horizonte - MG")
 # Navegação
 st.markdown("### Atalhos")
 c1, c2, c3 = st.columns(3)
-c1.button("📊 Evolução Temporal")
-c2.button("🗺️ Mapa de Risco")
-c3.button("📑 Detalhes Regionais")
+c1.button(" Evolução Temporal")
+c2.button(" Mapa de Risco")
+c3.button(" Detalhes Regionais")
 
 st.markdown("---")
 

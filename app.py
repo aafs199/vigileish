@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. CONFIGURAÇÃO E ESTILO
+# 1. ESTÉTICA E CONFIGURAÇÃO
 st.set_page_config(page_title="VigiLeish BH", layout="wide", page_icon="🏥")
 
 st.markdown("""
@@ -13,19 +13,25 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. FUNÇÃO PARA CARREGAR DADOS COM SEGURANÇA
+# 2. FUNÇÃO DE LEITURA COM TRATAMENTO DE ACENTUAÇÃO (ENCODING)
 @st.cache_data
 def load_data():
-    # Carrega o arquivo ignorando erros de linhas malformadas
-    df = pd.read_csv('dados', on_bad_lines='skip')
+    try:
+        # Tenta ler com codificação padrão
+        df = pd.read_csv('dados.csv', on_bad_lines='skip', encoding='utf-8')
+    except UnicodeDecodeError:
+        # Se falhar, tenta com codificação latina (comum em Excel/Windows)
+        df = pd.read_csv('dados.csv', on_bad_lines='skip', encoding='iso-8859-1')
     
-    # Limpeza para a Linha do Tempo (Anos 2014 a 2023)
-    # Procuramos as linhas onde a primeira coluna parece um ano
+    # Identifica as linhas de 2014 a 2023
     df_timeline = df[df.iloc[:, 0].astype(str).str.match(r'^20[1-2][0-9]$')].copy()
     df_timeline.columns = ['Ano', 'Casos', 'Pop', 'Incidencia', 'Prevalencia', 'Obitos', 'Letalidade'] + list(df.columns[7:])
     
-    # Filtramos apenas os últimos 10 anos fechados (2014-2023)
-    df_timeline = df_timeline[df_timeline['Ano'].isin([str(ano) for ano in range(2014, 2024)])]
+    # Garante que os anos e valores sejam tratados como números
+    df_timeline = df_timeline[df_timeline['Ano'].astype(str).isin([str(a) for a in range(2014, 2024)])]
+    df_timeline['Casos'] = pd.to_numeric(df_timeline['Casos'], errors='coerce')
+    df_timeline['Obitos'] = pd.to_numeric(df_timeline['Obitos'], errors='coerce')
+    df_timeline['Letalidade'] = pd.to_numeric(df_timeline['Letalidade'], errors='coerce')
     
     return df_timeline
 
@@ -43,42 +49,34 @@ try:
 
 except Exception as e:
     st.error(f"Erro na leitura dos dados: {e}")
-    st.info("Verifique se o arquivo no GitHub se chama 'dados.csv'")
+    st.info("Dica: Certifique-se de que o arquivo no GitHub se chama 'dados.csv'")
     st.stop()
 
-# 3. INTERFACE
+# 3. INTERFACE DO USUÁRIO
 st.title("VigiLeish: Vigilância Epidemiológica")
 st.write("Monitoramento da Leishmaniose Visceral | Belo Horizonte - MG")
 
-# Navegação
-st.markdown("### Atalhos")
-c1, c2, c3 = st.columns(3)
-c1.button(" Evolução Temporal")
-c2.button(" Mapa de Risco")
-c3.button(" Detalhes Regionais")
-
 st.markdown("---")
 
-# KPIs
+# KPIs Dinâmicos
 k1, k2, k3 = st.columns(3)
-# Pegamos o dado mais recente do DataFrame limpo
-ultimo_caso = pd.to_numeric(df_h['Casos']).iloc[-1]
-letalidade_media = pd.to_numeric(df_h['Letalidade']).mean()
+if not df_h.empty:
+    ultimo_caso = df_h['Casos'].iloc[-1]
+    letalidade_media = df_h['Letalidade'].mean()
+    k1.metric("Casos Incidentes (Ano Ref.)", f"{ultimo_caso:.0f}")
+    k2.metric("Letalidade Média (10 anos)", f"{letalidade_media:.1f}%")
+    k3.metric("Status", "Monitoramento Ativo")
 
-k1.metric("Casos Incidentes (Ano Ref.)", f"{ultimo_caso:.0f}")
-k2.metric("Letalidade Média (10 anos)", f"{letalidade_media:.1f}%")
-k3.metric("Status", "Monitoramento Ativo")
-
-# Gráfico de Linha
-st.subheader("Relação entre Casos e Óbitos (2014-2023)")
+# Gráfico de Linha (Evolução Temporal)
+st.subheader("Evolução: Casos vs Óbitos (2014-2023)")
 fig_l = px.line(df_h, x='Ano', y=['Casos', 'Obitos'], markers=True,
                 color_discrete_map={'Casos': '#d32f2f', 'Obitos': '#333333'})
-fig_l.update_layout(plot_bgcolor="white")
+fig_l.update_layout(plot_bgcolor="white", legend_title="Legenda")
 st.plotly_chart(fig_l, use_container_width=True)
 
 st.markdown("---")
 
-# Mapa e Ranking
+# Mapa e Gráfico de Barras
 col_map, col_rank = st.columns([1.5, 1])
 
 with col_map:
@@ -90,14 +88,14 @@ with col_map:
     st.plotly_chart(fig_map, use_container_width=True)
 
 with col_rank:
-    st.subheader("Casos Acumulados por Regional")
+    st.subheader("Casos por Regional")
     fig_rank = px.bar(df_m.sort_values('Total'), x='Total', y='Regional', orientation='h',
                       color='Total', color_continuous_scale='Reds')
     fig_rank.update_layout(showlegend=False, plot_bgcolor="white")
     st.plotly_chart(fig_rank, use_container_width=True)
 
-# Identificação
+# Rodapé Académico
 st.sidebar.markdown("---")
 st.sidebar.write(f"**Aluna:** Aline Alice Ferreira da Silva")
 st.sidebar.write(f"**RU:** 5277514")
-st.sidebar.caption("Dados: SINAN / SMSA-BH")
+st.sidebar.caption("Fonte: SINAN / SMSA-BH")

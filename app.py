@@ -167,3 +167,4 @@ with st.expander("ℹ️ Diretrizes de Saúde Pública"):
 
 # Download de Dados
 st.sidebar.download_button("Exportar Dados (CSV)", df_h.to_csv(index=False).encode('utf-8'), "vigileish_data.csv", "text/csv")
+

@@ -65,10 +65,10 @@ def load_all_data():
                 })
         
         # --- DADOS CANINOS ---
+        # Alterado para o nome exato do arquivo no seu GitHub
         df_can = pd.read_csv('caninos.csv', sep=';', encoding='iso-8859-1')
         df_can.columns = ['Ano', 'Sorologias', 'Positivos', 'Eutanasiados', 'Borrifados']
         
-        # Limpeza de formato e conversão numérica
         for col in ['Ano', 'Sorologias', 'Positivos', 'Eutanasiados', 'Borrifados']:
             df_can[col] = df_can[col].astype(str).str.replace('.', '').str.replace(',', '.')
             df_can[col] = pd.to_numeric(df_can[col], errors='coerce').fillna(0).astype(int)
@@ -136,24 +136,35 @@ elif st.session_state.segment == "Mapa":
         st.plotly_chart(fig_rank, use_container_width=True)
 
 elif st.session_state.segment == "Canina":
-    st.subheader(f"Análise de Reservatório Animal ({ano_alvo})")
-    df_c_ano = df_can[df_can['Ano'] == ano_alvo]
+    st.subheader("Análise de Reservatório Animal (LVC)")
     
+    # Métricas do Ano Selecionado
+    df_c_ano = df_can[df_can['Ano'] == ano_alvo]
     m1, m2, m3 = st.columns(3)
     if not df_c_ano.empty:
-        m1.metric("Sorologias Realizadas", f"{df_c_ano['Sorologias'].iloc[0]:.0f}")
-        m2.metric("Taxa de Positividade", f"{df_c_ano['Taxa_Positividade'].iloc[0]:.1f}%")
-        m3.metric("Ações de Borrifação", f"{df_c_ano['Borrifados'].iloc[0]:.0f}")
+        m1.metric(f"Positivos em {ano_alvo}", f"{df_c_ano['Positivos'].iloc[0]:.0f}")
+        m2.metric("Taxa Positividade", f"{df_c_ano['Taxa_Positividade'].iloc[0]:.1f}%")
+        m3.metric("Sorologias Totais", f"{df_c_ano['Sorologias'].iloc[0]:.0f}")
+
+    st.markdown("---")
+    
+    # NOVO GRÁFICO DE BARRAS CANINO (Solicitado)
+    st.subheader("Série Histórica: Cães Soropositivos")
+    fig_bar_can = px.bar(
+        df_can, x='Ano', y='Positivos',
+        color='Positivos', color_continuous_scale="YlOrRd",
+        labels={'Positivos': 'Total de Cães', 'Ano': 'Ano'},
+        title="Distribuição Anual de Cães Infectados"
+    )
+    fig_bar_can.update_layout(plot_bgcolor="white", xaxis_type='category')
+    st.plotly_chart(fig_bar_can, use_container_width=True)
     
     st.markdown("---")
-    st.subheader("Correlação Histórica: Ciclo Humano-Canino")
     
-    # FORÇANDO O TIPO INTEIRO NAS DUAS COLUNAS ANTES DO MERGE
+    # Gráfico de Correlação
+    st.subheader("Correlação: Humano vs Canino")
     df_h_merge = df_h[['Ano', 'Casos']].copy()
     df_c_merge = df_can[['Ano', 'Positivos']].copy()
-    df_h_merge['Ano'] = df_h_merge['Ano'].astype(int)
-    df_c_merge['Ano'] = df_c_merge['Ano'].astype(int)
-    
     df_merge = pd.merge(df_h_merge, df_c_merge, on='Ano')
     
     fig_corr = px.line(df_merge, x='Ano', y=['Casos', 'Positivos'], 
@@ -172,10 +183,10 @@ elif st.session_state.segment == "Historico":
 elif st.session_state.segment == "Diretrizes":
     st.subheader("Saúde e Bem-Estar (ODS 3)")
     st.info("""
-    **Diretrizes Estratégicas Baseadas em Dados:**
-    1. **Prevenção Animal:** Intensificar o encoleiramento em áreas onde a positividade canina ultrapassa 10%.
-    2. **Controle de Vetores:** Focar borrifação residual em regionais com alta densidade de matéria orgânica.
-    3. **Educação Comunitária:** Promover a limpeza de quintais como barreira contra o mosquito-palha.
+    **Diretrizes Estratégicas Baseadas em Dados Caninos:**
+    1. **Foco no Reservatório:** O gráfico de barras mostra períodos de alta carga viral animal; esses anos exigem encoleiramento em massa.
+    2. **Monitoramento:** Uma taxa de positividade canina crescente é o principal sinal de alerta para surtos humanos no ano seguinte.
+    3. **Ação:** O controle populacional e diagnóstico de cães é a barreira mais eficiente contra a Leishmaniose Visceral.
     """)
 
 st.sidebar.markdown("---")

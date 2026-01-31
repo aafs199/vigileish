@@ -4,7 +4,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# 1. DESIGN SYSTEM - Estética Premium e Profissional
 st.set_page_config(page_title="VigiLeish Intelligence | One Health", layout="wide", page_icon="🧬")
 
 st.markdown("""
@@ -226,3 +225,4 @@ elif st.session_state.segment == "Diretrizes":
 st.sidebar.markdown("---")
 st.sidebar.caption("Analista Responsável")
 st.sidebar.caption("RU: [Seu Registro Aqui]")
+

@@ -41,9 +41,13 @@ def load_all_data():
         df = pd.read_csv('dados.csv', sep=None, engine='python', encoding='iso-8859-1')
         df.columns = [c.strip() for c in df.columns]
         
-        # Histórico (2007-2024)
-        df_hist = df.iloc[13:31].copy()
-        df_hist.columns = ['Ano', 'Casos', 'Pop', 'Inc', 'Prev', 'Obitos', 'Letalidade'] + list(df.columns[7:])
+        # Filtrando estritamente entre 2007 e 2023
+        df['Ano_Num'] = pd.to_numeric(df.iloc[:, 0], errors='coerce')
+        df_hist = df[(df['Ano_Num'] >= 2007) & (df['Ano_Num'] <= 2023)].copy()
+        
+        # Selecionando colunas base
+        df_hist = df_hist.iloc[:, :7]
+        df_hist.columns = ['Ano', 'Casos', 'Pop', 'Inc', 'Prev', 'Obitos', 'Letalidade']
         
         for c in ['Ano', 'Casos', 'Obitos', 'Letalidade']:
             df_hist[c] = pd.to_numeric(df_hist[c], errors='coerce').fillna(0).astype(int)
@@ -56,18 +60,19 @@ def load_all_data():
         }
         
         reg_list = []
-        reg_names = list(coords.keys())
-        for reg in reg_names:
-            row = df[df.iloc[:,0].str.contains(reg, na=False, case=False)].iloc[0]
-            for i, ano in enumerate(range(2007, 2024)):
-                reg_list.append({
-                    'Regional': reg, 'Ano': int(ano), 
-                    'Casos': pd.to_numeric(row.iloc[i+1], errors='coerce'), 
-                    'Lat': coords[reg][0], 'Lon': coords[reg][1]
-                })
+        for reg, coord in coords.items():
+            mask = df.iloc[:,0].str.contains(reg, na=False, case=False)
+            if mask.any():
+                row = df[mask].iloc[0]
+                # Coleta colunas de 2007 (índice 1) até 2023 (índice 17)
+                for i, ano in enumerate(range(2007, 2024)):
+                    reg_list.append({
+                        'Regional': reg, 'Ano': int(ano), 
+                        'Casos': pd.to_numeric(row.iloc[i+1], errors='coerce'), 
+                        'Lat': coord[0], 'Lon': coord[1]
+                    })
         
         # --- DADOS CANINOS ---
-        # Carregando o arquivo e tratando todas as colunas disponíveis
         df_can = pd.read_csv('caninos.csv', sep=';', encoding='iso-8859-1')
         df_can.columns = ['Ano', 'Sorologias', 'Positivos', 'Eutanasiados', 'Borrifados']
         
@@ -75,6 +80,8 @@ def load_all_data():
             df_can[col] = df_can[col].astype(str).str.replace('.', '').str.replace(',', '.')
             df_can[col] = pd.to_numeric(df_can[col], errors='coerce').fillna(0).astype(int)
         
+        # Mantendo apenas o intervalo solicitado
+        df_can = df_can[(df_can['Ano'] >= 2007) & (df_can['Ano'] <= 2023)]
         df_can['Taxa_Positividade'] = (df_can['Positivos'] / df_can['Sorologias'] * 100).fillna(0)
 
         return df_hist, pd.DataFrame(reg_list), df_can
@@ -84,9 +91,8 @@ def load_all_data():
 
 df_h, df_m, df_can = load_all_data()
 
-# 3. NAVEGAÇÃO E FILTROS
-if 'segment' not in st.session_state: 
-    st.session_state.segment = "Geral"
+# 3. NAVEGAÇÃO
+if 'segment' not in st.session_state: st.session_state.segment = "Geral"
 
 st.sidebar.title("VigiLeish Navigator")
 if st.sidebar.button("📊 Painel Geral"): st.session_state.segment = "Geral"
@@ -99,111 +105,81 @@ st.sidebar.markdown("---")
 anos_disponiveis = sorted(df_m['Ano'].unique().tolist())
 ano_alvo = st.sidebar.select_slider("Ano de Referência:", options=anos_disponiveis, value=max(anos_disponiveis) if anos_disponiveis else 2023)
 
-# 4. EXIBIÇÃO DE CONTEÚDO
+# 4. EXIBIÇÃO
 st.title("VigiLeish Intelligence System")
 
-# SETOR: PAINEL GERAL
 if st.session_state.segment == "Geral":
-    st.subheader(f"Visão Consolidada | Belo Horizonte {ano_alvo}")
-    df_ano_h = df_h[df_h['Ano'] == ano_alvo]
-    df_ano_c = df_can[df_can['Ano'] == ano_alvo]
-    
+    st.subheader(f"Visão Consolidada | {ano_alvo}")
+    df_ah = df_h[df_h['Ano'] == ano_alvo]
+    df_ac = df_can[df_can['Ano'] == ano_alvo]
     c1, c2, c3, c4 = st.columns(4)
-    if not df_ano_h.empty:
-        c1.metric("Casos Humanos", f"{df_ano_h['Casos'].iloc[0]:.0f}")
-        letalidade = (df_ano_h['Obitos'].iloc[0]/df_ano_h['Casos'].iloc[0]*100) if df_ano_h['Casos'].iloc[0]>0 else 0
+    if not df_ah.empty:
+        c1.metric("Casos Humanos", f"{df_ah['Casos'].iloc[0]}")
+        letalidade = (df_ah['Obitos'].iloc[0]/df_ah['Casos'].iloc[0]*100) if df_ah['Casos'].iloc[0]>0 else 0
         c2.metric("Taxa Letalidade", f"{letalidade:.1f}%")
-    
-    if not df_ano_c.empty:
-        c3.metric("Cães Positivos", f"{df_ano_c['Positivos'].iloc[0]:.0f}")
-        c4.metric("Positividade Canina", f"{df_ano_c['Taxa_Positividade'].iloc[0]:.1f}%")
+    if not df_ac.empty:
+        c3.metric("Cães Positivos", f"{df_ac['Positivos'].iloc[0]}")
+        c4.metric("Positividade Canina", f"{df_ac['Taxa_Positividade'].iloc[0]:.1f}%")
 
-# SETOR: MONITORAMENTO GEOGRÁFICO
 elif st.session_state.segment == "Mapa":
     st.subheader(f"Mapeamento de Calor Regional ({ano_alvo})")
     df_map_filt = df_m[df_m['Ano'] == ano_alvo]
-    
     col_a, col_b = st.columns([1.8, 1])
     with col_a:
-        fig_map = px.scatter_mapbox(
-            df_map_filt, lat="Lat", lon="Lon", size="Casos", color="Casos",
-            hover_name="Regional", size_max=35, zoom=10.5,
-            color_continuous_scale="YlOrRd", 
-            mapbox_style="carto-positron"
-        )
-        fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, paper_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig_map, use_container_width=True)
+        fig = px.scatter_mapbox(df_map_filt, lat="Lat", lon="Lon", size="Casos", color="Casos",
+                                 size_max=35, zoom=10.5, color_continuous_scale="YlOrRd", mapbox_style="carto-positron")
+        fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+        st.plotly_chart(fig, use_container_width=True)
     with col_b:
-        fig_rank = px.bar(df_map_filt.sort_values('Casos'), x='Casos', y='Regional', 
-                         orientation='h', color='Casos', color_continuous_scale="YlOrRd")
-        fig_rank.update_layout(plot_bgcolor="white", showlegend=False, xaxis_title="Total de Casos")
-        st.plotly_chart(fig_rank, use_container_width=True)
+        st.plotly_chart(px.bar(df_map_filt.sort_values('Casos'), x='Casos', y='Regional', color='Casos', color_continuous_scale="YlOrRd"), use_container_width=True)
 
-# SETOR: VIGILÂNCIA CANINA (DADOS COMPLETOS DA PLANILHA)
 elif st.session_state.segment == "Canina":
-    st.subheader(f"Monitoramento do Reservatório Animal e Intervenções ({ano_alvo})")
-    
+    st.subheader(f"Monitoramento Animal (2007-2023)")
     df_c_ano = df_can[df_can['Ano'] == ano_alvo]
-    
-    # 1. Apresentando todos os dados da planilha em métricas
     m1, m2, m3, m4, m5 = st.columns(5)
     if not df_c_ano.empty:
-        m1.metric("Sorologias", f"{df_c_ano['Sorologias'].iloc[0]:,}".replace(',', '.'))
-        m2.metric("Positivos", f"{df_c_ano['Positivos'].iloc[0]:,}".replace(',', '.'))
+        m1.metric("Sorologias", f"{df_c_ano['Sorologias'].iloc[0]:.0f}")
+        m2.metric("Positivos", f"{df_c_ano['Positivos'].iloc[0]:.0f}")
         m3.metric("Taxa Positividade", f"{df_c_ano['Taxa_Positividade'].iloc[0]:.1f}%")
-        m4.metric("Eutanasiados", f"{df_c_ano['Eutanasiados'].iloc[0]:,}".replace(',', '.'))
-        m5.metric("Imóveis Borrifados", f"{df_c_ano['Borrifados'].iloc[0]:,}".replace(',', '.'))
+        m4.metric("Eutanasiados", f"{df_c_ano['Eutanasiados'].iloc[0]:.0f}")
+        m5.metric("Imóveis Borrifados", f"{df_c_ano['Borrifados'].iloc[0]:.0f}")
 
     st.markdown("---")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Gráfico de Barras: Positivos vs Eutanasiados (Novos dados)
-        st.subheader("Desfecho: Positivos vs Eutanasiados")
-        fig_desfecho = go.Figure()
-        fig_desfecho.add_trace(go.Bar(x=df_can['Ano'], y=df_can['Positivos'], name='Positivos', marker_color='#F59E0B'))
-        fig_desfecho.add_trace(go.Bar(x=df_can['Ano'], y=df_can['Eutanasiados'], name='Eutanasiados', marker_color='#D32F2F'))
-        fig_desfecho.update_layout(barmode='group', plot_bgcolor='white', xaxis_type='category')
-        st.plotly_chart(fig_desfecho, use_container_width=True)
-
-    with col2:
-        # Gráfico de Linha: Intervenção Ambiental (Imóveis Borrifados)
-        st.subheader("Intervenção: Imóveis Borrifados")
+    st.subheader("Desfecho e Intervenção Canina")
+    c1, c2 = st.columns(2)
+    with c1:
+        fig_des = go.Figure()
+        fig_des.add_trace(go.Bar(x=df_can['Ano'], y=df_can['Positivos'], name='Positivos', marker_color='#F59E0B'))
+        fig_des.add_trace(go.Bar(x=df_can['Ano'], y=df_can['Eutanasiados'], name='Eutanasiados', marker_color='#D32F2F'))
+        fig_des.update_layout(barmode='group', plot_bgcolor='white', xaxis_type='category')
+        st.plotly_chart(fig_des, use_container_width=True)
+    with c2:
         fig_borr = px.line(df_can, x='Ano', y='Borrifados', markers=True, color_discrete_sequence=['#334155'])
         fig_borr.update_layout(plot_bgcolor='white', xaxis_type='category')
         st.plotly_chart(fig_borr, use_container_width=True)
 
     st.markdown("---")
-    
-    # Mantendo o gráfico de duplo eixo para correlação
     st.subheader("Tendência Comparativa: Humanos vs Caninos (Eixos Independentes)")
     df_h_merge = df_h[['Ano', 'Casos']].copy()
     df_c_merge = df_can[['Ano', 'Positivos']].copy()
     df_merge = pd.merge(df_h_merge, df_c_merge, on='Ano').sort_values('Ano')
-    
     fig_dual = make_subplots(specs=[[{"secondary_y": True}]])
     fig_dual.add_trace(go.Scatter(x=df_merge['Ano'], y=df_merge['Positivos'], name="Cães Positivos", line=dict(color='#d32f2f', width=3), mode='lines+markers'), secondary_y=False)
     fig_dual.add_trace(go.Scatter(x=df_merge['Ano'], y=df_merge['Casos'], name="Casos Humanos", line=dict(color='#334155', width=3, dash='dot'), mode='lines+markers'), secondary_y=True)
-    fig_dual.update_yaxes(title_text="<b>Cães</b> Positivos", secondary_y=False, color='#d32f2f')
-    fig_dual.update_yaxes(title_text="<b>Casos</b> Humanos", secondary_y=True, color='#334155')
+    fig_dual.update_yaxes(title_text="Cães Positivos", secondary_y=False, color='#d32f2f')
+    fig_dual.update_yaxes(title_text="Casos Humanos", secondary_y=True, color='#334155')
     fig_dual.update_layout(plot_bgcolor="white", hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
     st.plotly_chart(fig_dual, use_container_width=True)
 
 elif st.session_state.segment == "Historico":
-    st.subheader("Evolução Histórica Humana (2007-2024)")
+    st.subheader("Evolução Histórica Humana (2007-2023)")
     fig_h_line = px.line(df_h, x='Ano', y=['Casos', 'Obitos'], markers=True, color_discrete_map={'Casos': '#334155', 'Obitos': '#ef4444'})
-    fig_h_line.update_layout(plot_bgcolor="white")
+    fig_h_line.update_layout(plot_bgcolor="white", xaxis_type='category')
     st.plotly_chart(fig_h_line, use_container_width=True)
 
 elif st.session_state.segment == "Diretrizes":
     st.subheader("Saúde e Bem-Estar (ODS 3)")
-    st.info("""
-    **Análise dos Novos Indicadores Caninos:**
-    * **Eutanasiados:** Representa o impacto da doença no bem-estar animal e a necessidade de medidas preventivas para evitar o sacrifício.
-    * **Imóveis Borrifados:** Mostra o esforço de controle vetorial (combate ao mosquito-palha) em campo.
-    * **Sorologias:** Indica a capacidade de testagem e vigilância ativa do município.
-    """)
+    st.info("Painel consolidado com dados de 2007 a 2023. A exclusão de 2024 e das somas totais garante a precisão técnica necessária para a análise acadêmica.")
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")

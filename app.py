@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. DESIGN SYSTEM (Estética de Alta Performance)
+# 1. DESIGN SYSTEM
 st.set_page_config(page_title="VigiLeish Intelligence | One Health", layout="wide", page_icon="🧬")
 
 st.markdown("""
@@ -14,7 +14,6 @@ st.markdown("""
         background-color: #fcfcfd;
     }
     
-    /* Menu Lateral Customizado */
     div.stButton > button {
         width: 100%; border-radius: 8px; height: 3em; background-color: #ffffff;
         color: #0f172a; border: 1px solid #e2e8f0; text-align: left; transition: all 0.2s;
@@ -22,7 +21,6 @@ st.markdown("""
     }
     div.stButton > button:hover { border-color: #d32f2f; color: #d32f2f; background-color: #fffafa; }
     
-    /* Cards de Métricas */
     .stMetric {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -38,17 +36,17 @@ st.markdown("""
 def load_all_data():
     try:
         # --- DADOS HUMANOS ---
-        # Tenta ler detectando separador e encoding para evitar erros de acentuação
         df = pd.read_csv('dados.csv', sep=None, engine='python', encoding='iso-8859-1')
         df.columns = [c.strip() for c in df.columns]
         
         # Histórico (2007-2024)
         df_hist = df.iloc[13:31].copy()
         df_hist.columns = ['Ano', 'Casos', 'Pop', 'Inc', 'Prev', 'Obitos', 'Letalidade'] + list(df.columns[7:])
-        for c in ['Casos', 'Obitos', 'Letalidade']:
-            df_hist[c] = pd.to_numeric(df_hist[c], errors='coerce').fillna(0)
         
-        # Coordenadas das Regionais de BH
+        for c in ['Ano', 'Casos', 'Obitos', 'Letalidade']:
+            df_hist[c] = pd.to_numeric(df_hist[c], errors='coerce').fillna(0).astype(int)
+        
+        # Coordenadas das Regionais
         coords = {
             'Barreiro': [-19.974, -44.022], 'Centro Sul': [-19.933, -43.935], 'Leste': [-19.921, -43.902],
             'Nordeste': [-19.892, -43.911], 'Noroeste': [-19.914, -43.962], 'Norte': [-19.831, -43.918],
@@ -61,7 +59,7 @@ def load_all_data():
             row = df[df.iloc[:,0].str.contains(reg, na=False, case=False)].iloc[0]
             for i, ano in enumerate(range(2007, 2024)):
                 reg_list.append({
-                    'Regional': reg, 'Ano': ano, 
+                    'Regional': reg, 'Ano': int(ano), 
                     'Casos': pd.to_numeric(row.iloc[i+1], errors='coerce'), 
                     'Lat': coords[reg][0], 'Lon': coords[reg][1]
                 })
@@ -70,12 +68,11 @@ def load_all_data():
         df_can = pd.read_csv('caninos.csv', sep=';', encoding='iso-8859-1')
         df_can.columns = ['Ano', 'Sorologias', 'Positivos', 'Eutanasiados', 'Borrifados']
         
-        # Limpeza de formato (remover pontos de milhar do padrão PT-BR)
-        for col in ['Sorologias', 'Positivos', 'Eutanasiados', 'Borrifados']:
+        # Limpeza de formato e conversão numérica
+        for col in ['Ano', 'Sorologias', 'Positivos', 'Eutanasiados', 'Borrifados']:
             df_can[col] = df_can[col].astype(str).str.replace('.', '').str.replace(',', '.')
-            df_can[col] = pd.to_numeric(df_can[col], errors='coerce').fillna(0)
+            df_can[col] = pd.to_numeric(df_can[col], errors='coerce').fillna(0).astype(int)
         
-        df_can['Ano'] = pd.to_numeric(df_can['Ano'], errors='coerce')
         df_can['Taxa_Positividade'] = (df_can['Positivos'] / df_can['Sorologias'] * 100).fillna(0)
 
         return df_hist, pd.DataFrame(reg_list), df_can
@@ -97,33 +94,27 @@ if st.sidebar.button("🐕 Vigilância Canina"): st.session_state.segment = "Can
 if st.sidebar.button("📋 Diretrizes ODS 3"): st.session_state.segment = "Diretrizes"
 
 st.sidebar.markdown("---")
-
-# Linha corrigida (sem cortes)
 anos_disponiveis = sorted(df_m['Ano'].unique().tolist())
-if anos_disponiveis:
-    ano_alvo = st.sidebar.select_slider("Ano de Referência:", options=anos_disponiveis, value=2023)
-else:
-    ano_alvo = 2023
+ano_alvo = st.sidebar.select_slider("Ano de Referência:", options=anos_disponiveis, value=max(anos_disponiveis) if anos_disponiveis else 2023)
 
 # 4. EXIBIÇÃO DE CONTEÚDO
 st.title("VigiLeish Intelligence System")
 
-# SETOR: PAINEL GERAL
 if st.session_state.segment == "Geral":
     st.subheader(f"Visão Consolidada | Belo Horizonte {ano_alvo}")
-    df_ano_h = df_h[df_h['Ano'].astype(str).str.contains(str(ano_alvo))]
+    df_ano_h = df_h[df_h['Ano'] == ano_alvo]
     df_ano_c = df_can[df_can['Ano'] == ano_alvo]
     
     c1, c2, c3, c4 = st.columns(4)
     if not df_ano_h.empty:
         c1.metric("Casos Humanos", f"{df_ano_h['Casos'].iloc[0]:.0f}")
-        c2.metric("Taxa Letalidade", f"{(df_ano_h['Obitos'].iloc[0]/df_ano_h['Casos'].iloc[0]*100):.1f}%" if df_ano_h['Casos'].iloc[0]>0 else "0%")
+        letalidade = (df_ano_h['Obitos'].iloc[0]/df_ano_h['Casos'].iloc[0]*100) if df_ano_h['Casos'].iloc[0]>0 else 0
+        c2.metric("Taxa Letalidade", f"{letalidade:.1f}%")
     
     if not df_ano_c.empty:
         c3.metric("Cães Positivos", f"{df_ano_c['Positivos'].iloc[0]:.0f}")
         c4.metric("Positividade Canina", f"{df_ano_c['Taxa_Positividade'].iloc[0]:.1f}%")
 
-# SETOR: MONITORAMENTO GEOGRÁFICO
 elif st.session_state.segment == "Mapa":
     st.subheader(f"Mapeamento de Calor Regional ({ano_alvo})")
     df_map_filt = df_m[df_m['Ano'] == ano_alvo]
@@ -144,7 +135,6 @@ elif st.session_state.segment == "Mapa":
         fig_rank.update_layout(plot_bgcolor="white", showlegend=False, xaxis_title="Total de Casos")
         st.plotly_chart(fig_rank, use_container_width=True)
 
-# SETOR: VIGILÂNCIA CANINA
 elif st.session_state.segment == "Canina":
     st.subheader(f"Análise de Reservatório Animal ({ano_alvo})")
     df_c_ano = df_can[df_can['Ano'] == ano_alvo]
@@ -157,14 +147,21 @@ elif st.session_state.segment == "Canina":
     
     st.markdown("---")
     st.subheader("Correlação Histórica: Ciclo Humano-Canino")
-    df_merge = pd.merge(df_h[['Ano', 'Casos']], df_can[['Ano', 'Positivos']], on='Ano')
+    
+    # FORÇANDO O TIPO INTEIRO NAS DUAS COLUNAS ANTES DO MERGE
+    df_h_merge = df_h[['Ano', 'Casos']].copy()
+    df_c_merge = df_can[['Ano', 'Positivos']].copy()
+    df_h_merge['Ano'] = df_h_merge['Ano'].astype(int)
+    df_c_merge['Ano'] = df_c_merge['Ano'].astype(int)
+    
+    df_merge = pd.merge(df_h_merge, df_c_merge, on='Ano')
+    
     fig_corr = px.line(df_merge, x='Ano', y=['Casos', 'Positivos'], 
                        labels={'value': 'Quantidade', 'variable': 'Indicador'},
                        color_discrete_map={'Casos': '#334155', 'Positivos': '#d32f2f'})
     fig_corr.update_layout(plot_bgcolor="white")
     st.plotly_chart(fig_corr, use_container_width=True)
 
-# SETOR: SÉRIE HISTÓRICA
 elif st.session_state.segment == "Historico":
     st.subheader("Evolução Histórica (2007-2024)")
     fig_h_line = px.line(df_h, x='Ano', y=['Casos', 'Obitos'], markers=True,
@@ -172,7 +169,6 @@ elif st.session_state.segment == "Historico":
     fig_h_line.update_layout(plot_bgcolor="white")
     st.plotly_chart(fig_h_line, use_container_width=True)
 
-# SETOR: DIRETRIZES ODS 3
 elif st.session_state.segment == "Diretrizes":
     st.subheader("Saúde e Bem-Estar (ODS 3)")
     st.info("""

@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # 1. DESIGN SYSTEM
 st.set_page_config(page_title="VigiLeish Intelligence | One Health", layout="wide", page_icon="🧬")
@@ -65,7 +67,6 @@ def load_all_data():
                 })
         
         # --- DADOS CANINOS ---
-        # Alterado para o nome exato do arquivo no seu GitHub
         df_can = pd.read_csv('caninos.csv', sep=';', encoding='iso-8859-1')
         df_can.columns = ['Ano', 'Sorologias', 'Positivos', 'Eutanasiados', 'Borrifados']
         
@@ -148,33 +149,53 @@ elif st.session_state.segment == "Canina":
 
     st.markdown("---")
     
-    # NOVO GRÁFICO DE BARRAS CANINO (Solicitado)
+    # Gráfico de Barras Canino
     st.subheader("Série Histórica: Cães Soropositivos")
     fig_bar_can = px.bar(
         df_can, x='Ano', y='Positivos',
         color='Positivos', color_continuous_scale="YlOrRd",
-        labels={'Positivos': 'Total de Cães', 'Ano': 'Ano'},
-        title="Distribuição Anual de Cães Infectados"
+        labels={'Positivos': 'Total de Cães', 'Ano': 'Ano'}
     )
     fig_bar_can.update_layout(plot_bgcolor="white", xaxis_type='category')
     st.plotly_chart(fig_bar_can, use_container_width=True)
     
     st.markdown("---")
     
-    # Gráfico de Correlação
-    st.subheader("Correlação: Humano vs Canino")
+    # GRÁFICO DE DUPLO EIXO (CORREÇÃO DE ESCALA)
+    st.subheader("Tendência Comparativa: Humanos vs Caninos (Eixos Independentes)")
+    
     df_h_merge = df_h[['Ano', 'Casos']].copy()
     df_c_merge = df_can[['Ano', 'Positivos']].copy()
-    df_merge = pd.merge(df_h_merge, df_c_merge, on='Ano')
+    df_merge = pd.merge(df_h_merge, df_c_merge, on='Ano').sort_values('Ano')
     
-    fig_corr = px.line(df_merge, x='Ano', y=['Casos', 'Positivos'], 
-                       labels={'value': 'Quantidade', 'variable': 'Indicador'},
-                       color_discrete_map={'Casos': '#334155', 'Positivos': '#d32f2f'})
-    fig_corr.update_layout(plot_bgcolor="white")
-    st.plotly_chart(fig_corr, use_container_width=True)
+    # Criando o gráfico com eixo secundário
+    fig_dual = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # Adicionando a linha de Cães (Eixo Esquerdo)
+    fig_dual.add_trace(
+        go.Scatter(x=df_merge['Ano'], y=df_merge['Positivos'], name="Cães Positivos", 
+                   line=dict(color='#d32f2f', width=3), mode='lines+markers'),
+        secondary_y=False,
+    )
+
+    # Adicionando a linha de Humanos (Eixo Direito)
+    fig_dual.add_trace(
+        go.Scatter(x=df_merge['Ano'], y=df_merge['Casos'], name="Casos Humanos", 
+                   line=dict(color='#334155', width=3, dash='dot'), mode='lines+markers'),
+        secondary_y=True,
+    )
+
+    # Títulos dos Eixos
+    fig_dual.update_xaxes(title_text="Ano")
+    fig_dual.update_yaxes(title_text="<b>Cães</b> Positivos (Milhares)", secondary_y=False, color='#d32f2f')
+    fig_dual.update_yaxes(title_text="<b>Casos</b> Humanos (Unidades)", secondary_y=True, color='#334155')
+    
+    fig_dual.update_layout(plot_bgcolor="white", hovermode="x unified", legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    
+    st.plotly_chart(fig_dual, use_container_width=True)
 
 elif st.session_state.segment == "Historico":
-    st.subheader("Evolução Histórica (2007-2024)")
+    st.subheader("Evolução Histórica Humanizada (2007-2024)")
     fig_h_line = px.line(df_h, x='Ano', y=['Casos', 'Obitos'], markers=True,
                    color_discrete_map={'Casos': '#334155', 'Obitos': '#ef4444'})
     fig_h_line.update_layout(plot_bgcolor="white")
@@ -183,10 +204,10 @@ elif st.session_state.segment == "Historico":
 elif st.session_state.segment == "Diretrizes":
     st.subheader("Saúde e Bem-Estar (ODS 3)")
     st.info("""
-    **Diretrizes Estratégicas Baseadas em Dados Caninos:**
-    1. **Foco no Reservatório:** O gráfico de barras mostra períodos de alta carga viral animal; esses anos exigem encoleiramento em massa.
-    2. **Monitoramento:** Uma taxa de positividade canina crescente é o principal sinal de alerta para surtos humanos no ano seguinte.
-    3. **Ação:** O controle populacional e diagnóstico de cães é a barreira mais eficiente contra a Leishmaniose Visceral.
+    **Análise Técnica da Correlação:**
+    * Note como as linhas de cães e humanos se comportam de forma similar. 
+    * O uso de dois eixos permite enxergar que surtos em cães (eixo vermelho) costumam anteceder ou acompanhar surtos em humanos (eixo cinza).
+    * Isso justifica o investimento em vigilância animal como forma de prevenir a mortalidade humana.
     """)
 
 st.sidebar.markdown("---")

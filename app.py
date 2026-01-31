@@ -5,8 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+
 # 1. DESIGN SYSTEM - Focado em Responsividade
-st.set_page_config(page_title="VigiLeish Intelligence", layout="wide", page_icon="🧬")
+st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="🧬")
 
 st.markdown("""
     <style>

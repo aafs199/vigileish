@@ -167,7 +167,7 @@ df_h, df_m, df_c, df_v = load_data()
 # --- 4. MENU LATERAL ---
 if 'segment' not in st.session_state: st.session_state.segment = "Geral"
 with st.sidebar:
-    # logo
+    # Criamos uma div para identificar a logo no CSS
     st.markdown('<div class="sidebar-logo">', unsafe_allow_html=True)
     st.image("dog.png")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -186,6 +186,7 @@ if not df_h.empty:
     ano_sel = st.sidebar.selectbox("Ano de análise:", options=anos, index=0)
 else:
     ano_sel = 2025
+
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
@@ -408,4 +409,5 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 

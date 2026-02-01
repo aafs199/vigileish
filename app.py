@@ -171,7 +171,7 @@ with st.sidebar:
     st.markdown('<div class="sidebar-logo">', unsafe_allow_html=True)
     st.image("dog.png")
     st.markdown('</div>', unsafe_allow_html=True)
-st.sidebar.markdown("###")
+st.sidebar.markdown("### Menu de Navegação")
 if st.sidebar.button("Painel Geral", use_container_width=True): st.session_state.segment = "Geral"
 if st.sidebar.button("Mapa Regional", use_container_width=True): st.session_state.segment = "Mapa"
 if st.sidebar.button("Vigilância Canina", use_container_width=True): st.session_state.segment = "Canina"
@@ -409,5 +409,6 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 

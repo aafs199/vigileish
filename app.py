@@ -70,7 +70,7 @@ st.markdown("""
     }
     [data-testid="stMetricValue"] { color: #2E7D32 !important; font-weight: 700 !important; }
 
-    /* --- CAIXAS EXPLICATIVAS (NOVO) --- */
+    /* --- CAIXAS EXPLICATIVAS (SEM ÍCONES) --- */
     .info-box {
         background-color: #ecfdf5; /* Verde muito claro */
         border-left: 5px solid #059669; /* Verde médio */
@@ -199,10 +199,10 @@ st.markdown(f"""
 if st.session_state.segment == "Geral":
     st.subheader(f"Visão Consolidada | {ano_sel}")
 
-    # Texto Explicativo Simples
+    # Texto Explicativo (SEM ÍCONE)
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">📌 Entenda os Dados</span>
+        <span class="info-title">Entenda os Dados</span>
         Aqui você tem um resumo rápido da situação da doença neste ano:
         <ul>
             <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com Leishmaniose.</li>
@@ -258,9 +258,10 @@ if st.session_state.segment == "Geral":
 elif st.session_state.segment == "Canina":
     st.subheader("Vigilância Canina e Controle Vetorial")
 
+    # Texto Explicativo (SEM ÍCONE)
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">📌 Por que monitoramos os cães?</span>
+        <span class="info-title">Por que monitoramos os cães?</span>
         Em áreas urbanas, o cão é a principal fonte de infecção. O mosquito pica o cão doente e depois transmite para o ser humano.
         <ul>
             <li><strong>Testes (Sorologias):</strong> Quantidade de exames realizados pelos agentes de saúde.</li>
@@ -313,9 +314,10 @@ elif st.session_state.segment == "Canina":
 elif st.session_state.segment == "Mapa":
     st.subheader(f"Distribuição Geográfica | {ano_sel}")
 
+    # Texto Explicativo (SEM ÍCONE)
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">📌 Onde a doença acontece?</span>
+        <span class="info-title">Onde a doença acontece?</span>
         O mapa abaixo mostra como os casos estão distribuídos pelas regionais de Belo Horizonte.
         <br>Círculos <strong>maiores e mais escuros</strong> indicam um número maior de pessoas doentes naquela região.
     </div>
@@ -348,9 +350,10 @@ elif st.session_state.segment == "Mapa":
 elif st.session_state.segment == "Historico":
     st.subheader("Análise de Tendência: Humanos vs Caninos")
 
+    # Texto Explicativo (SEM ÍCONE)
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">📌 Qual a relação entre cães e humanos?</span>
+        <span class="info-title">Qual a relação entre cães e humanos?</span>
         Este gráfico permite visualizar a conexão ao longo do tempo. Geralmente, um aumento no número de cães infectados (Linha Verde)
         pode preceder ou acompanhar o aumento de casos em humanos (Linha Pontilhada). O controle da doença nos animais é essencial para proteger as pessoas.
     </div>

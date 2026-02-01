@@ -2,3 +2,4 @@ streamlit
 pandas
 plotly
 numpy<2
+xlsxwriter

@@ -5,18 +5,21 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide")
+st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="🧬")
 
-# --- 2. ESTILO CSS (VISUAL VERDE) ---
+# --- 2. ESTILO CSS (VISUAL VERDE + CAIXAS EXPLICATIVAS) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
     
+    /* Fonte Geral */
     .main .block-container { color: #1e293b; font-family: 'Lora', serif; }
     h1, h2, h3, h4, h5, h6, p, div { font-family: 'Lora', serif !important; }
+    
+    /* Títulos */
     .main h2, .main h3, .main h4 { color: #064E3B !important; font-weight: 700 !important; }
     
-    /* SIDEBAR */
+    /* --- SIDEBAR --- */
     [data-testid="stSidebar"] {
         background-color: #f7fcf9 !important;
         border-right: 1px solid #d1d5db;
@@ -25,7 +28,7 @@ st.markdown("""
         color: #064E3B !important;
     }
     
-    /* FILTROS */
+    /* --- FILTROS (Selectbox) --- */
     div[data-baseweb="select"] > div {
         background-color: #ffffff !important;
         border-color: #86efac !important;
@@ -43,7 +46,7 @@ st.markdown("""
         color: #064E3B !important;
     }
 
-    /* BOTÕES */
+    /* --- BOTÕES --- */
     div.stButton > button, div.stLinkButton > a {
         background-color: #ffffff !important; 
         color: #064E3B !important;
@@ -59,7 +62,7 @@ st.markdown("""
         transform: translateY(-1px);
     }
 
-    /* MÉTRICAS */
+    /* --- MÉTRICAS --- */
     [data-testid="stMetric"] {
         background-color: #ffffff; padding: 15px; border-radius: 8px;
         border: 1px solid #e2e8f0; border-left: 5px solid #2E7D32;
@@ -67,7 +70,25 @@ st.markdown("""
     }
     [data-testid="stMetricValue"] { color: #2E7D32 !important; font-weight: 700 !important; }
 
-    /* CABEÇALHO */
+    /* --- CAIXAS EXPLICATIVAS (NOVO) --- */
+    .info-box {
+        background-color: #ecfdf5; /* Verde muito claro */
+        border-left: 5px solid #059669; /* Verde médio */
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        color: #1e293b;
+        font-size: 0.95rem;
+    }
+    .info-title {
+        color: #064E3B;
+        font-weight: bold;
+        margin-bottom: 5px;
+        display: block;
+        font-size: 1.1rem;
+    }
+
+    /* --- CABEÇALHO --- */
     .header-container {
         background-color: #064E3B; padding: 40px 20px; border-radius: 8px; margin-bottom: 30px;
         text-align: center; border-bottom: 4px solid #4ade80; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -81,7 +102,7 @@ st.markdown("""
 @st.cache_data
 def load_data():
     try:
-        # A. HUMANOS (32 linhas = 1994 a 2025)
+        # A. HUMANOS
         df_h_raw = pd.read_csv('dados_novos.csv', skiprows=1, nrows=32, encoding='iso-8859-1', sep=None, engine='python')
         df_h_raw = df_h_raw.iloc[:, :7]
         df_h_raw.columns = ['Ano', 'Casos', 'Pop', 'Inc', 'Prev', 'Obitos', 'Letalidade']
@@ -99,11 +120,8 @@ def load_data():
         for index, row in df_reg_raw.iterrows():
             reg_nome = str(row.iloc[0]).strip()
             if reg_nome in coords:
-                # Loop para ler colunas. Ajuste se necessário para capturar anos corretos.
                 for i in range(1, len(row)): 
                     try:
-                        # Assumindo estrutura fixa onde colunas começam em 2007 (ou ajustável conforme CSV)
-                        # Se o CSV regional só tiver dados de 2007 pra frente, manteremos assim.
                         ano = 2006 + i 
                         val = row.iloc[i]
                         regionais_lista.append({
@@ -132,7 +150,7 @@ def load_data():
             df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0).astype(int)
         df_v_clean = df_v_raw.copy()
 
-        # FILTRO DE SEGURANÇA (Até 2025)
+        # FILTRO FINAL DE SEGURANÇA: MÁXIMO 2025
         df_h_raw = df_h_raw[df_h_raw['Ano'] <= 2025]
         if not df_mapa.empty:
             df_mapa = df_mapa[df_mapa['Ano'] <= 2025]
@@ -180,6 +198,21 @@ st.markdown(f"""
 # --- 6. CONTEÚDO ---
 if st.session_state.segment == "Geral":
     st.subheader(f"Visão Consolidada | {ano_sel}")
+
+    # Texto Explicativo Simples
+    st.markdown("""
+    <div class="info-box">
+        <span class="info-title">📌 Entenda os Dados</span>
+        Aqui você tem um resumo rápido da situação da doença neste ano:
+        <ul>
+            <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com Leishmaniose.</li>
+            <li><strong>Letalidade:</strong> A gravidade da doença (porcentagem de pessoas que faleceram em relação aos casos).</li>
+            <li><strong>Cães Positivos:</strong> Quantos cães fizeram o exame e tiveram o resultado confirmado para a doença.</li>
+            <li><strong>Imóveis Borrifados:</strong> Casas que receberam aplicação de inseticida para matar o mosquito.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
     dh = df_h[df_h['Ano']==ano_sel]
     dc = df_c[df_c['Ano']==ano_sel]
     dv = df_v[df_v['Ano']==ano_sel]
@@ -223,7 +256,20 @@ if st.session_state.segment == "Geral":
         col8.metric("Imóveis Borrifados", "0")
 
 elif st.session_state.segment == "Canina":
-    st.subheader("Vigilância Canina: Testes, Casos e Ações")
+    st.subheader("Vigilância Canina e Controle Vetorial")
+
+    st.markdown("""
+    <div class="info-box">
+        <span class="info-title">📌 Por que monitoramos os cães?</span>
+        Em áreas urbanas, o cão é a principal fonte de infecção. O mosquito pica o cão doente e depois transmite para o ser humano.
+        <ul>
+            <li><strong>Testes (Sorologias):</strong> Quantidade de exames realizados pelos agentes de saúde.</li>
+            <li><strong>Positivos:</strong> Cães que foram confirmados com a doença.</li>
+            <li><strong>Eutanásias:</strong> Medida de controle recomendada pelo Ministério da Saúde para cães positivos, visando reduzir a transmissão.</li>
+            <li><strong>Borrifação:</strong> Controle químico aplicado nos imóveis para eliminar o mosquito vetor.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
     
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     
@@ -250,7 +296,6 @@ elif st.session_state.segment == "Canina":
         legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
     )
     
-    # AJUSTE DO EIXO X PARA 1994-2025
     fig.update_xaxes(dtick=1, range=[1993.5, 2025.5], title_text="Ano")
     fig.update_yaxes(title_text="Qtd. Animais", secondary_y=False, showgrid=True, gridcolor='#f1f5f9')
     fig.update_yaxes(title_text="Total Testes", secondary_y=True, showgrid=False)
@@ -267,6 +312,14 @@ elif st.session_state.segment == "Canina":
 
 elif st.session_state.segment == "Mapa":
     st.subheader(f"Distribuição Geográfica | {ano_sel}")
+
+    st.markdown("""
+    <div class="info-box">
+        <span class="info-title">📌 Onde a doença acontece?</span>
+        O mapa abaixo mostra como os casos estão distribuídos pelas regionais de Belo Horizonte.
+        <br>Círculos <strong>maiores e mais escuros</strong> indicam um número maior de pessoas doentes naquela região.
+    </div>
+    """, unsafe_allow_html=True)
     
     df_f = df_m[df_m['Ano'] == ano_sel]
     if not df_f.empty:
@@ -289,15 +342,22 @@ elif st.session_state.segment == "Mapa":
                                title=f"Evolução dos Casos Humanos: {reg_sel}",
                                color_discrete_sequence=['#2E7D32'])
         fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Lora")
-        fig_hist_reg.update_xaxes(dtick=1, range=[2007, 2025]) # Regional parece ter menos dados, mas ajustável
+        fig_hist_reg.update_xaxes(dtick=1, range=[2007, 2025]) 
         st.plotly_chart(fig_hist_reg, use_container_width=True)
 
 elif st.session_state.segment == "Historico":
     st.subheader("Análise de Tendência: Humanos vs Caninos")
+
+    st.markdown("""
+    <div class="info-box">
+        <span class="info-title">📌 Qual a relação entre cães e humanos?</span>
+        Este gráfico permite visualizar a conexão ao longo do tempo. Geralmente, um aumento no número de cães infectados (Linha Verde)
+        pode preceder ou acompanhar o aumento de casos em humanos (Linha Pontilhada). O controle da doença nos animais é essencial para proteger as pessoas.
+    </div>
+    """, unsafe_allow_html=True)
     
-    # IMPORTANTE: Mudei para how='outer' para não cortar os anos de 1994-2006 (onde só humanos têm dados)
+    # Merge com outer para garantir todo o histórico desde 1994
     df_merged = pd.merge(df_h[['Ano', 'Casos']], df_c[['Ano', 'Positivos']], on='Ano', how='outer').sort_values('Ano')
-    # Filtra apenas o range desejado caso o outer traga lixo
     df_merged = df_merged[(df_merged['Ano'] >= 1994) & (df_merged['Ano'] <= 2025)]
     
     fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -336,7 +396,6 @@ elif st.session_state.segment == "Historico":
         legend=dict(orientation="h", y=-0.3, x=0.3)
     )
     
-    # Eixo X fixado em 1994 a 2025
     fig.update_xaxes(title_text="Ano", dtick=1, range=[1994, 2025], showgrid=False)
     fig.update_yaxes(title_text="Cães Positivos", secondary_y=False, showgrid=True, gridcolor='#f1f5f9')
     fig.update_yaxes(title_text="Casos Humanos", secondary_y=True, showgrid=False)

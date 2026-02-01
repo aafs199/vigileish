@@ -7,7 +7,7 @@ from plotly.subplots import make_subplots
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="dog.png")
 
-# --- 2. ESTILO CSS (VISUAL VERDE + CAIXAS EXPLICATIVAS) ---
+# --- 2. CAIXAS EXPLICATIVAS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
@@ -70,7 +70,7 @@ st.markdown("""
     }
     [data-testid="stMetricValue"] { color: #2E7D32 !important; font-weight: 700 !important; }
 
-    /* --- CAIXAS EXPLICATIVAS (SEM ÍCONES) --- */
+    /* --- CAIXAS EXPLICATIVAS --- */
     .info-box {
         background-color: #ecfdf5; /* Verde muito claro */
         border-left: 5px solid #059669; /* Verde médio */
@@ -204,15 +204,16 @@ st.markdown(f"""
 if st.session_state.segment == "Geral":
     st.subheader(f"Visão Consolidada | {ano_sel}")
 
-    # Texto Explicativo (SEM ÍCONE)
+    # Texto Explicativo
     st.markdown("""
     <div class="info-box">
         <span class="info-title">Entenda os Dados</span>
-        Aqui você tem um resumo rápido da situação da doença neste ano:
+        Aqui você tem um resumo rápido da situação da doença no ano selecionado:
         <ul>
             <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com Leishmaniose.</li>
             <li><strong>Letalidade:</strong> A gravidade da doença (porcentagem de pessoas que faleceram em relação aos casos).</li>
             <li><strong>Cães Positivos:</strong> Quantos cães fizeram o exame e tiveram o resultado confirmado para a doença.</li>
+            <li><strong>Taxa Positividade:</strong> Proporção de cães doentes entre todos os que foram testados no ano. Se essa taxa aumenta, é um sinal de que a leishmaniose está circulando com mais intensidade entre os animais.</li>
             <li><strong>Imóveis Borrifados:</strong> Casas que receberam aplicação de inseticida para matar o mosquito.</li>
         </ul>
     </div>
@@ -409,6 +410,7 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 
 

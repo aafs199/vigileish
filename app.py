@@ -172,6 +172,11 @@ with st.sidebar:
     st.image("dog.png")
     st.markdown('</div>', unsafe_allow_html=True)
 st.sidebar.markdown("### Menu de Navegação")
+if not df_h.empty:
+    anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
+    ano_sel = st.sidebar.selectbox("Ano de análise:", options=anos, index=0)
+else:
+    ano_sel = 2025
 if st.sidebar.button("Painel Geral", use_container_width=True): st.session_state.segment = "Geral"
 if st.sidebar.button("Mapa Regional", use_container_width=True): st.session_state.segment = "Mapa"
 if st.sidebar.button("Vigilância Canina", use_container_width=True): st.session_state.segment = "Canina"
@@ -180,13 +185,6 @@ if st.sidebar.button("Tendências Históricas", use_container_width=True): st.se
 st.sidebar.link_button("Leishmaniose Canina (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
 
 st.sidebar.markdown("<br>", unsafe_allow_html=True)
-
-if not df_h.empty:
-    anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
-    ano_sel = st.sidebar.selectbox("Ano de análise:", options=anos, index=0)
-else:
-    ano_sel = 2025
-
 
 st.sidebar.markdown("---")
 st.sidebar.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
@@ -409,6 +407,7 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 
 

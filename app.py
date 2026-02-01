@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="🧬")
+st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="dog.png")
 
 # --- 2. ESTILO CSS (VISUAL VERDE + CAIXAS EXPLICATIVAS) ---
 st.markdown("""
@@ -166,8 +166,12 @@ df_h, df_m, df_c, df_v = load_data()
 
 # --- 4. MENU LATERAL ---
 if 'segment' not in st.session_state: st.session_state.segment = "Geral"
-
-st.sidebar.markdown("### Navegação")
+with st.sidebar:
+    # logo
+    st.markdown('<div class="sidebar-logo">', unsafe_allow_html=True)
+    st.image("dog.png")
+    st.markdown('</div>', unsafe_allow_html=True)
+st.sidebar.markdown("###")
 if st.sidebar.button("Painel Geral", use_container_width=True): st.session_state.segment = "Geral"
 if st.sidebar.button("Mapa Regional", use_container_width=True): st.session_state.segment = "Mapa"
 if st.sidebar.button("Vigilância Canina", use_container_width=True): st.session_state.segment = "Canina"
@@ -404,3 +408,4 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+

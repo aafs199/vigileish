@@ -3,102 +3,97 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from datetime import datetime
+import logging
+
+# --- 0. CONFIGURAÇÃO DE LOGGING (Engenharia de Software) ---
+# Erros técnicos vão para o console, não para a tela do usuário
+logging.basicConfig(level=logging.ERROR)
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="dog.png")
 
-# --- 2. CAIXAS EXPLICATIVAS ---
-st.markdown("""
+# --- 2. LOGO E MENU LATERAL (Início) ---
+with st.sidebar:
+    st.markdown('<div class="sidebar-logo">', unsafe_allow_html=True)
+    st.image("dog.png", width=120) 
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- CONTROLE DE ACESSIBILIDADE (Visual) ---
+    st.markdown("### 👁️ Acessibilidade")
+    tamanho_fonte = st.radio(
+        "Tamanho do Texto:",
+        ["Padrão", "Grande", "Extra Grande"],
+        index=0
+    )
+
+    # Lógica de escala de fonte
+    if tamanho_fonte == "Grande":
+        css_root = "125%" 
+        plotly_font = 16
+    elif tamanho_fonte == "Extra Grande":
+        css_root = "150%"
+        plotly_font = 20
+    else:
+        css_root = "100%" 
+        plotly_font = 14
+
+    st.markdown("---")
+
+# --- 3. ESTILO CSS DINÂMICO ---
+# Injetamos a variável {css_root} para alterar o tamanho de tudo proporcionalmente
+st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
     
+    html {{ font-size: {css_root} !important; }}
+
     /* Fonte Geral */
-    .main .block-container { color: #1e293b; font-family: 'Lora', serif; }
-    h1, h2, h3, h4, h5, h6, p, div { font-family: 'Lora', serif !important; }
+    .main .block-container {{ color: #1e293b; font-family: 'Lora', serif; }}
+    h1, h2, h3, h4, h5, h6, p, div {{ font-family: 'Lora', serif !important; }}
     
     /* Títulos */
-    .main h2, .main h3, .main h4 { color: #064E3B !important; font-weight: 700 !important; }
+    .main h2, .main h3, .main h4 {{ color: #064E3B !important; font-weight: 700 !important; }}
     
-    /* --- SIDEBAR --- */
-    [data-testid="stSidebar"] {
-        background-color: #f7fcf9 !important;
-        border-right: 1px solid #d1d5db;
-    }
-    [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
-        color: #064E3B !important;
-    }
+    /* Sidebar */
+    [data-testid="stSidebar"] {{ background-color: #f7fcf9 !important; border-right: 1px solid #d1d5db; }}
     
-    /* --- FILTROS (Selectbox) --- */
-    div[data-baseweb="select"] > div {
-        background-color: #ffffff !important;
-        border-color: #86efac !important;
-        color: #1e293b !important;
-    }
-    div[data-baseweb="select"] > div:hover {
-        border-color: #2E7D32 !important;
-    }
-    div[data-baseweb="select"]:focus-within > div {
-        border-color: #2E7D32 !important;
-        box-shadow: 0 0 0 1px #2E7D32 !important;
-    }
-    ul[data-baseweb="menu"] li[aria-selected="true"] {
-        background-color: #dcfce7 !important;
-        color: #064E3B !important;
-    }
-
-    /* --- BOTÕES --- */
-    div.stButton > button, div.stLinkButton > a {
-        background-color: #ffffff !important; 
-        color: #064E3B !important;
-        border: 1px solid #2E7D32 !important; 
-        border-radius: 6px !important;
-        font-weight: 600 !important;
-        transition: all 0.3s ease !important;
-    }
-    div.stButton > button:hover, div.stLinkButton > a:hover {
-        background-color: #2E7D32 !important; 
-        color: white !important;
-        border-color: #2E7D32 !important;
-        transform: translateY(-1px);
-    }
-
-    /* --- MÉTRICAS --- */
-    [data-testid="stMetric"] {
+    /* Filtros e Botões */
+    div[data-baseweb="select"] > div {{ background-color: #ffffff !important; border-color: #5D3A9B !important; color: #1e293b !important; }}
+    div.stButton > button, div.stLinkButton > a {{
+        background-color: #ffffff !important; color: #064E3B !important; border: 1px solid #2E7D32 !important; 
+        border-radius: 6px !important; font-weight: 600 !important;
+    }}
+    
+    /* Métricas */
+    [data-testid="stMetric"] {{
         background-color: #ffffff; padding: 15px; border-radius: 8px;
-        border: 1px solid #e2e8f0; border-left: 5px solid #2E7D32;
+        border: 1px solid #e2e8f0; border-left: 5px solid #5D3A9B;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    [data-testid="stMetricValue"] { color: #2E7D32 !important; font-weight: 700 !important; }
+    }}
+    
+    /* Caixas Explicativas */
+    .info-box {{
+        background-color: #f0fdf4; border-left: 5px solid #117733; padding: 15px;
+        border-radius: 5px; margin-bottom: 20px; color: #1e293b; font-size: 0.95rem;
+        line-height: 1.6;
+    }}
+    .info-title {{ color: #117733; font-weight: bold; margin-bottom: 8px; display: block; font-size: 1.15rem; }}
 
-    /* --- CAIXAS EXPLICATIVAS --- */
-    .info-box {
-        background-color: #ecfdf5; /* Verde muito claro */
-        border-left: 5px solid #059669; /* Verde médio */
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 20px;
-        color: #1e293b;
-        font-size: 0.95rem;
-    }
-    .info-title {
-        color: #064E3B;
-        font-weight: bold;
-        margin-bottom: 5px;
-        display: block;
-        font-size: 1.1rem;
-    }
-
-    /* --- CABEÇALHO --- */
-    .header-container {
+    /* Cabeçalho */
+    .header-container {{
         background-color: #064E3B; padding: 40px 20px; border-radius: 8px; margin-bottom: 30px;
-        text-align: center; border-bottom: 4px solid #4ade80; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    .header-title { color: #ffffff !important; font-size: 2.2rem !important; margin: 0 !important; font-weight: 700 !important; }
-    .header-subtitle { color: #dcfce7 !important; margin-top: 10px !important; font-size: 1.0rem; font-style: italic; }
+        text-align: center; border-bottom: 4px solid #C2410C; /* Laranja Acessível */
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }}
+    .header-title {{ color: #ffffff !important; font-size: 2.2rem !important; margin: 0 !important; font-weight: 700 !important; }}
+    .header-subtitle {{ color: #dcfce7 !important; margin-top: 10px !important; font-size: 1.0rem; font-style: italic; }}
+    
+    .sidebar-logo {{ display: flex; justify-content: center; margin-bottom: 20px; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. CARREGAMENTO DE DADOS ---
+# --- 4. CARREGAMENTO DE DADOS (Com Logs e Validação) ---
 @st.cache_data
 def load_data():
     try:
@@ -150,49 +145,51 @@ def load_data():
             df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0).astype(int)
         df_v_clean = df_v_raw.copy()
 
-        # FILTRO FINAL DE SEGURANÇA: MÁXIMO 2025
+        # FILTROS E VALIDAÇÃO DE FAIXAS (Sanity Check)
         df_h_raw = df_h_raw[df_h_raw['Ano'] <= 2025]
-        if not df_mapa.empty:
-            df_mapa = df_mapa[df_mapa['Ano'] <= 2025]
+        # Evitar erros de plotagem com dados negativos
+        df_h_raw = df_h_raw[df_h_raw['Casos'] >= 0] 
+        
+        if not df_mapa.empty: df_mapa = df_mapa[df_mapa['Ano'] <= 2025]
         df_c_clean = df_c_clean[df_c_clean['Ano'] <= 2025]
         df_v_clean = df_v_clean[df_v_clean['Ano'] <= 2025]
 
         return df_h_raw, df_mapa, df_c_clean, df_v_clean
+
     except Exception as e:
-        st.error(f"Erro ao carregar dados: {e}")
+        # LOGGING: Registra o erro no terminal, mas não quebra o site
+        logging.error(f"ERRO CRÍTICO NO CARREGAMENTO DE DADOS: {e}")
+        st.warning("⚠️ O sistema encontrou uma instabilidade ao carregar os dados. Algumas visualizações podem estar indisponíveis.")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 df_h, df_m, df_c, df_v = load_data()
 
-# --- 4. MENU LATERAL ---
+# --- 5. CONTINUAÇÃO DO MENU LATERAL ---
 if 'segment' not in st.session_state: st.session_state.segment = "Geral"
+
 with st.sidebar:
-    # Criamos uma div para identificar a logo no CSS
-    st.markdown('<div class="sidebar-logo">', unsafe_allow_html=True)
-    st.image("dog.png")
-    st.markdown('</div>', unsafe_allow_html=True)
-st.sidebar.markdown("### Menu de Navegação")
-if not df_h.empty:
-    anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
-    ano_sel = st.sidebar.selectbox("Selecione o ano:", options=anos, index=0)
-else:
-    ano_sel = 2025
-if st.sidebar.button("Painel Geral", use_container_width=True): st.session_state.segment = "Geral"
-if st.sidebar.button("Mapa Regional", use_container_width=True): st.session_state.segment = "Mapa"
-if st.sidebar.button("Vigilância Canina", use_container_width=True): st.session_state.segment = "Canina"
-if st.sidebar.button("Tendências Históricas", use_container_width=True): st.session_state.segment = "Historico"
+    st.markdown("### Menu de Navegação")
+    
+    if not df_h.empty:
+        anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
+        ano_sel = st.selectbox("Selecione o ano:", options=anos, index=0)
+    else:
+        ano_sel = 2025
 
-st.sidebar.link_button("Informações (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
+    if st.button("Painel Geral", use_container_width=True): st.session_state.segment = "Geral"
+    if st.button("Mapa Regional", use_container_width=True): st.session_state.segment = "Mapa"
+    if st.button("Vigilância Canina", use_container_width=True): st.session_state.segment = "Canina"
+    if st.button("Tendências Históricas", use_container_width=True): st.session_state.segment = "Historico"
 
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
+    st.link_button("Informações (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
 
-st.sidebar.markdown("---")
-st.sidebar.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
-st.sidebar.caption(f"Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto")
-st.sidebar.caption(f"UNINTER")
-st.sidebar.caption(f"Desenvolvido por: Aline Alice Ferreira da Silva | RU: 5277514")
+    st.markdown("---")
+    st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
+    st.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
+    st.caption(f"Projeto: Tecnologia Aplicada à Inclusão Digital - UNINTER")
+    st.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")
 
-# --- 5. CABEÇALHO ---
+# --- 6. CABEÇALHO ---
 st.markdown(f"""
     <div class="header-container">
         <h1 class="header-title">VigiLeish: Painel de Monitoramento</h1>
@@ -200,21 +197,20 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# --- 6. CONTEÚDO ---
+# --- 7. CONTEÚDO ---
 if st.session_state.segment == "Geral":
     st.subheader(f"Visão Consolidada | {ano_sel}")
 
-    # Texto Explicativo
     st.markdown("""
     <div class="info-box">
         <span class="info-title">Entenda os Dados</span>
-        Aqui você tem um resumo rápido da situação da doença no ano selecionado:
+        Abaixo apresentamos um resumo da situação da Leishmaniose Visceral neste ano. O objetivo é facilitar o entendimento sobre a gravidade e o controle da doença:
         <ul>
-            <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com Leishmaniose.</li>
-            <li><strong>Letalidade:</strong> A gravidade da doença (porcentagem de pessoas que faleceram em relação aos casos).</li>
-            <li><strong>Cães Positivos:</strong> Quantos cães fizeram o exame e tiveram o resultado confirmado para a doença.</li>
-            <li><strong>Taxa Positividade:</strong> Proporção de cães doentes entre todos os que foram testados no ano. Se essa taxa aumenta, é um sinal de que a leishmaniose está circulando com mais intensidade entre os animais.</li>
-            <li><strong>Imóveis Borrifados:</strong> Casas que receberam aplicação de inseticida para matar o mosquito.</li>
+            <li><strong>Casos Humanos:</strong> Total de pessoas diagnosticadas com a doença no ano selecionado.</li>
+            <li><strong>Letalidade (%):</strong> Indica a gravidade dos casos. Se este número aumenta, significa que a doença está sendo mais fatal, muitas vezes por demora na busca por ajuda médica. <br><i><b>Nota:</b> Valores acima de 10% aparecem com alerta em laranja ⚠️.</i></li>
+            <li><strong>Cães Positivos:</strong> Quantidade de animais que fizeram o exame e tiveram a doença confirmada.</li>
+            <li><strong>Taxa de Positividade (%):</strong> Funciona como um "termômetro". Ela mostra a porcentagem de exames que deram positivo. Se essa taxa sobe, é sinal de que o parasita está circulando com força entre os cães da região.</li>
+            <li><strong>Imóveis Borrifados:</strong> Número de casas que receberam a aplicação de inseticida para eliminar o mosquito palha (vetor da doença).</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -226,113 +222,138 @@ if st.session_state.segment == "Geral":
     st.markdown("##### Indicadores Humanos")
     col1, col2, col3 = st.columns(3)
     if not dh.empty:
-        col1.metric("Casos Humanos", f"{dh['Casos'].iloc[0]}")
-        col2.metric("Óbitos", f"{dh['Obitos'].iloc[0]}")
-        col3.metric("Letalidade", f"{dh['Letalidade'].iloc[0]:.1f}%")
+        col1.metric("Casos Humanos", f"{int(dh['Casos'].iloc[0])}")
+        col2.metric("Óbitos", f"{int(dh['Obitos'].iloc[0])}")
+        
+        # ALERTA DE LETALIDADE COM COR ACESSÍVEL (#C2410C)
+        letalidade = dh['Letalidade'].iloc[0]
+        if letalidade > 10:
+            cor_borda = "#C2410C" 
+            icone = "⚠️ ALTA"
+            cor_texto = "#C2410C"
+        else:
+            cor_borda = "#1e293b"
+            icone = "Estável"
+            cor_texto = "#1e293b"
+
+        col3.markdown(f"""
+            <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; border-left: 6px solid {cor_borda};">
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 5px; font-family: 'Lora', serif;">Letalidade</p>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <p style="color: {cor_texto}; font-size: 1.8rem; font-weight: 700; margin: 0; font-family: 'Lora', serif;">{letalidade:.1f}%</p>
+                    <span style="font-size: 0.9rem; font-weight: bold; color: {cor_texto}; background: #fff3e0; padding: 2px 6px; border-radius: 4px;">{icone}</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
     else:
-        col1.metric("Casos Humanos", "0")
-        col2.metric("Óbitos", "0")
-        col3.metric("Letalidade", "0%")
+        col1.metric("Casos Humanos", "0"); col2.metric("Óbitos", "0"); col3.metric("Letalidade", "0%")
 
     st.markdown("---")
 
     st.markdown("##### Vigilância Canina")
     col4, col5, col6 = st.columns(3)
     if not dc.empty:
-        col4.metric("Cães Positivos", f"{dc['Positivos'].iloc[0]:,}".replace(',', '.'))
-        col5.metric("Eutanásias", f"{dc['Eutanasiados'].iloc[0]:,}".replace(',', '.'))
+        col4.metric("Cães Positivos", f"{int(dc['Positivos'].iloc[0]):,}".replace(',', '.'))
+        col5.metric("Eutanásias", f"{int(dc['Eutanasiados'].iloc[0]):,}".replace(',', '.'))
         col6.metric("Taxa Positividade", f"{dc['Taxa_Positividade'].iloc[0]:.1f}%")
     else:
-        col4.metric("Cães Positivos", "0")
-        col5.metric("Eutanásias", "0")
-        col6.metric("Taxa Positividade", "0.0%")
+        col4.metric("Cães Positivos", "0"); col5.metric("Eutanásias", "0"); col6.metric("Taxa Positividade", "0.0%")
 
     st.markdown("---")
 
     st.markdown("##### Testes e Controle Vetorial")
     col7, col8 = st.columns(2)
     if not dc.empty:
-        col7.metric("Total Sorologias (Testes)", f"{dc['Sorologias'].iloc[0]:,}".replace(',', '.'))
-    else:
-        col7.metric("Total Sorologias", "0")
+        col7.metric("Total Sorologias (Testes)", f"{int(dc['Sorologias'].iloc[0]):,}".replace(',', '.'))
+    else: col7.metric("Total Sorologias", "0")
 
     if not dv.empty:
-        col8.metric("Imóveis Borrifados", f"{dv['Borrifados'].iloc[0]:,}".replace(',', '.'))
-    else:
-        col8.metric("Imóveis Borrifados", "0")
+        col8.metric("Imóveis Borrifados", f"{int(dv['Borrifados'].iloc[0]):,}".replace(',', '.'))
+    else: col8.metric("Imóveis Borrifados", "0")
 
 elif st.session_state.segment == "Canina":
     st.subheader("Vigilância Canina e Controle Vetorial")
 
-    # Texto Explicativo (SEM ÍCONE)
     st.markdown("""
     <div class="info-box">
         <span class="info-title">Por que monitoramos os cães?</span>
-        Em áreas urbanas, o cão é a principal fonte de infecção. O mosquito pica o cão doente e depois transmite para o ser humano.
+        Em áreas urbanas, o cão é o principal <b>reservatório</b> da doença. O monitoramento contínuo permite ações rápidas.
+        <br><br>
+        <b>Guia visual do gráfico:</b>
         <ul>
-            <li><strong>Testes (Sorologias):</strong> Quantidade de exames realizados pelos agentes de saúde.</li>
-            <li><strong>Positivos:</strong> Cães que foram confirmados com a doença.</li>
-            <li><strong>Eutanásias:</strong> Medida de controle recomendada pelo Ministério da Saúde para cães positivos, visando reduzir a transmissão.</li>
-            <li><strong>Borrifação:</strong> Controle químico aplicado nos imóveis para eliminar o mosquito vetor.</li>
+            <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas:</span> <strong>Cães Positivos</strong> (Confirmados com a doença).</li>
+            <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas:</span> <strong>Eutanásias</strong> (Controle de reservatório).</li>
+            <li><span style='color:#117733; font-weight:bold;'>● Linha Verde:</span> <strong>Total de Testes</strong> (Volume de trabalho da vigilância).</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
+
+    dc_ano = df_c[df_c['Ano'] == ano_sel]
+    col1, col2, col3 = st.columns(3)
+    if not dc_ano.empty:
+        col1.metric("Cães Positivos", f"{int(dc_ano['Positivos'].iloc[0]):,}".replace(',', '.'))
+        col2.metric("Eutanásias", f"{int(dc_ano['Eutanasiados'].iloc[0]):,}".replace(',', '.'))
+        col3.metric("Taxa Positividade", f"{dc_ano['Taxa_Positividade'].iloc[0]:.1f}%")
+    else:
+        col1.metric("Cães Positivos", "0"); col2.metric("Eutanásias", "0"); col3.metric("Taxa Positividade", "0.0%")
     
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    st.markdown("<br>", unsafe_allow_html=True)
     
-    # Eixo Esquerdo (Barras)
-    fig.add_trace(go.Bar(
-        x=df_c['Ano'], y=df_c['Positivos'], name="Cães Positivos", marker_color='#F59E0B'
-    ), secondary_y=False)
+    # GRÁFICO COM COR ACESSÍVEL (#C2410C)
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                        vertical_spacing=0.1,
+                        subplot_titles=("Positivos e Eutanásias (Qtd. Animais)", "Total de Testes Realizados"))
+
+    fig.add_trace(go.Bar(x=df_c['Ano'], y=df_c['Positivos'], name="Cães Positivos", marker_color='#C2410C'), row=1, col=1)
+    fig.add_trace(go.Bar(x=df_c['Ano'], y=df_c['Eutanasiados'], name="Eutanásias", marker_color='#5D3A9B'), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df_c['Ano'], y=df_c['Sorologias'], name="Total de Testes", mode='lines+markers', line=dict(color='#117733', width=3)), row=2, col=1)
     
-    fig.add_trace(go.Bar(
-        x=df_c['Ano'], y=df_c['Eutanasiados'], name="Eutanásias", marker_color='#B91C1C'
-    ), secondary_y=False)
+    fig.update_layout(height=700, plot_bgcolor='white', font_family="Lora", barmode='group',
+                      font=dict(size=plotly_font),
+                      legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center")) 
     
-    # Eixo Direito (Linha)
-    fig.add_trace(go.Scatter(
-        x=df_c['Ano'], y=df_c['Sorologias'], name="Total de Testes", 
-        mode='lines+markers', line=dict(color='#2E7D32', width=3)
-    ), secondary_y=True)
-    
-    fig.update_layout(
-        title="<b>Monitoramento do Reservatório Canino (1994-2025)</b>", 
-        plot_bgcolor='white', 
-        font_family="Lora",
-        barmode='group',
-        legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
-    )
-    
-    fig.update_xaxes(dtick=1, range=[1993.5, 2025.5], title_text="Ano")
-    fig.update_yaxes(title_text="Qtd. Animais", secondary_y=False, showgrid=True, gridcolor='#f1f5f9')
-    fig.update_yaxes(title_text="Total Testes", secondary_y=True, showgrid=False)
-    
+    fig.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9')
+    fig.update_xaxes(dtick=1, range=[1993.5, 2025.5])
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
     
     st.subheader("Controle Químico (Imóveis Borrifados)")
+    
+    st.markdown("""
+    <div class="info-box">
+        O gráfico abaixo mostra a evolução do <b>Controle Vetorial</b> (visitas para aplicação de inseticida).
+    </div>
+    """, unsafe_allow_html=True)
+
     fig_v = px.line(df_v, x='Ano', y='Borrifados', markers=True, color_discrete_sequence=['#374151'])
-    fig_v.update_layout(plot_bgcolor='white', font_family="Lora", yaxis_title="Qtd. Imóveis")
+    fig_v.update_layout(plot_bgcolor='white', font_family="Lora", yaxis_title="Qtd. Imóveis",
+                        font=dict(size=plotly_font),
+                        legend=dict(orientation="h", y=1.1, x=0.5))
+    fig_v.update_yaxes(tickformat=".,d") 
     fig_v.update_xaxes(dtick=1, range=[1994, 2025])
     st.plotly_chart(fig_v, use_container_width=True)
 
 elif st.session_state.segment == "Mapa":
     st.subheader(f"Distribuição Geográfica | {ano_sel}")
 
-    # Texto Explicativo (SEM ÍCONE)
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">Onde a doença acontece?</span>
-        O mapa abaixo mostra como os casos estão distribuídos pelas regionais de Belo Horizonte.
-        <br>Círculos <strong>maiores e mais escuros</strong> indicam um número maior de pessoas doentes naquela região.
+        <span class="info-title">Como ler este mapa?</span>
+        Utilizamos uma escala de cores segura (Viridis) para identificar onde a doença está mais ativa.
+        <ul>
+            <li><span style='background-color: #FDE725; padding: 0 5px; color: black;'><b>Amarelo / Claro:</b></span> Regiões com <b>menos casos</b>.</li>
+            <li><span style='background-color: #440154; padding: 0 5px; color: white;'><b>Roxo / Escuro:</b></span> Regiões com <b>maior concentração de casos</b> (Alerta).</li>
+        </ul>
     </div>
     """, unsafe_allow_html=True)
     
     df_f = df_m[df_m['Ano'] == ano_sel]
     if not df_f.empty:
-        fig = px.scatter_mapbox(df_f, lat="Lat", lon="Lon", size="Casos", color="Casos", zoom=10, mapbox_style="carto-positron", color_continuous_scale="Greens")
-        fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, height=500)
+        fig = px.scatter_mapbox(df_f, lat="Lat", lon="Lon", size="Casos", color="Casos", zoom=10, 
+                                mapbox_style="carto-positron", 
+                                color_continuous_scale="Viridis_r") 
+        fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, height=500, font=dict(size=plotly_font))
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Sem dados regionais para o ano selecionado.")
@@ -348,71 +369,54 @@ elif st.session_state.segment == "Mapa":
         
         fig_hist_reg = px.line(df_reg_hist, x='Ano', y='Casos', markers=True,
                                title=f"Evolução dos Casos Humanos: {reg_sel}",
-                               color_discrete_sequence=['#2E7D32'])
-        fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Lora")
+                               color_discrete_sequence=['#117733']) 
+        fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Lora", font=dict(size=plotly_font))
         fig_hist_reg.update_xaxes(dtick=1, range=[2007, 2025]) 
         st.plotly_chart(fig_hist_reg, use_container_width=True)
 
 elif st.session_state.segment == "Historico":
     st.subheader("Análise de Tendência: Humanos vs Caninos")
 
-    # Texto Explicativo (SEM ÍCONE)
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">Qual a relação entre cães e humanos?</span>
-        Este gráfico permite visualizar a conexão ao longo do tempo. Geralmente, um aumento no número de cães infectados (Linha Verde)
-        pode preceder ou acompanhar o aumento de casos em humanos (Linha Pontilhada). O controle da doença nos animais é essencial para proteger as pessoas.
+        <span class="info-title">Correlação Histórica</span>
+        Acompanhe a relação entre as populações ao longo das décadas.
+        <ul>
+            <li><span style='color:#C2410C; font-weight:bold;'>● Linha Laranja (Eixo Esquerdo):</span> <strong>Cães Positivos</strong>.</li>
+            <li><span style='color:#5D3A9B; font-weight:bold;'>● Linha Roxa (Eixo Direito):</span> <strong>Casos Humanos</strong>.</li>
+        </ul>
+        Observe como as curvas frequentemente se acompanham.
     </div>
     """, unsafe_allow_html=True)
     
-    # Merge com outer para garantir todo o histórico desde 1994
     df_merged = pd.merge(df_h[['Ano', 'Casos']], df_c[['Ano', 'Positivos']], on='Ano', how='outer').sort_values('Ano')
     df_merged = df_merged[(df_merged['Ano'] >= 1994) & (df_merged['Ano'] <= 2025)]
     
     fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # 1. Linha Cães Positivos (Verde)
     fig.add_trace(
         go.Scatter(
-            x=df_merged['Ano'], 
-            y=df_merged['Positivos'], 
-            name="Cães Positivos",
-            mode='lines+markers',
-            line=dict(color='#2E7D32', width=3),
-            marker=dict(size=6)
-        ),
-        secondary_y=False
+            x=df_merged['Ano'], y=df_merged['Positivos'], name="Cães Positivos",
+            mode='lines+markers', line=dict(color='#C2410C', width=3), marker=dict(size=6)
+        ), secondary_y=False
     )
 
-    # 2. Linha Casos Humanos (Pontilhado)
     fig.add_trace(
         go.Scatter(
-            x=df_merged['Ano'], 
-            y=df_merged['Casos'], 
-            name="Casos Humanos",
-            mode='lines+markers',
-            line=dict(color='#1f2937', width=3, dash='dot'), 
-            marker=dict(size=6)
-        ),
-        secondary_y=True
+            x=df_merged['Ano'], y=df_merged['Casos'], name="Casos Humanos",
+            mode='lines+markers', line=dict(color='#5D3A9B', width=3, dash='dot'), marker=dict(size=6)
+        ), secondary_y=True
     )
 
     fig.update_layout(
         title="<b>Correlação: Humano vs Canino (1994-2025)</b>",
-        font_family="Lora",
-        plot_bgcolor='white',
-        hovermode="x unified",
-        legend=dict(orientation="h", y=-0.3, x=0.3)
+        font_family="Lora", plot_bgcolor='white', hovermode="x unified",
+        font=dict(size=plotly_font),
+        legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
     )
     
     fig.update_xaxes(title_text="Ano", dtick=1, range=[1994, 2025], showgrid=False)
-    fig.update_yaxes(title_text="Cães Positivos", secondary_y=False, showgrid=True, gridcolor='#f1f5f9')
-    fig.update_yaxes(title_text="Casos Humanos", secondary_y=True, showgrid=False)
+    fig.update_yaxes(title_text="Cães Positivos", tickformat=".,d", secondary_y=False, showgrid=True, gridcolor='#f1f5f9')
+    fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
-
-
-
-
-
-

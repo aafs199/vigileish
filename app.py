@@ -6,8 +6,8 @@ from plotly.subplots import make_subplots
 from datetime import datetime
 import logging
 
-# --- 0. CONFIGURAÇÃO DE LOGGING (Engenharia de Software) ---
-# Erros técnicos vão para o console, não para a tela do usuário
+# --- 0. CONFIGURAÇÃO DE LOGGING ---
+
 logging.basicConfig(level=logging.ERROR)
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
@@ -41,7 +41,7 @@ with st.sidebar:
     st.markdown("---")
 
 # --- 3. ESTILO CSS DINÂMICO ---
-# Injetamos a variável {css_root} para alterar o tamanho de tudo proporcionalmente
+
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
@@ -93,7 +93,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. CARREGAMENTO DE DADOS (Com Logs e Validação) ---
+# --- 4. CARREGAMENTO DE DADOS ---
 @st.cache_data
 def load_data():
     try:
@@ -157,7 +157,7 @@ def load_data():
         return df_h_raw, df_mapa, df_c_clean, df_v_clean
 
     except Exception as e:
-        # LOGGING: Registra o erro no terminal, mas não quebra o site
+       
         logging.error(f"ERRO CRÍTICO NO CARREGAMENTO DE DADOS: {e}")
         st.warning("⚠️ O sistema encontrou uma instabilidade ao carregar os dados. Algumas visualizações podem estar indisponíveis.")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -186,7 +186,7 @@ with st.sidebar:
     st.markdown("---")
     st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
     st.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
-    st.caption(f"Projeto: Tecnologia Aplicada à Inclusão Digital - UNINTER")
+    st.caption(f"Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
     st.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")
 
 # --- 6. CABEÇALHO ---
@@ -204,13 +204,13 @@ if st.session_state.segment == "Geral":
     st.markdown("""
     <div class="info-box">
         <span class="info-title">Entenda os Dados</span>
-        Abaixo apresentamos um resumo da situação da Leishmaniose Visceral neste ano. O objetivo é facilitar o entendimento sobre a gravidade e o controle da doença:
+        Aqui você tem um resumo rápido da situação da doença no ano selecionado:
         <ul>
-            <li><strong>Casos Humanos:</strong> Total de pessoas diagnosticadas com a doença no ano selecionado.</li>
-            <li><strong>Letalidade (%):</strong> Indica a gravidade dos casos. Se este número aumenta, significa que a doença está sendo mais fatal, muitas vezes por demora na busca por ajuda médica. <br><i><b>Nota:</b> Valores acima de 10% aparecem com alerta em laranja ⚠️.</i></li>
+            <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com Leishmaniose no ano selecionado.</li>
+            <li><strong>Letalidade (%):</strong> Indica a gravidade dos casos. Se este número aumenta, significa que a doença está sendo mais fatal. <br><i><b>Nota:</b> Valores acima de 10% aparecem com alerta em laranja ⚠️.</i></li>
             <li><strong>Cães Positivos:</strong> Quantidade de animais que fizeram o exame e tiveram a doença confirmada.</li>
-            <li><strong>Taxa de Positividade (%):</strong> Funciona como um "termômetro". Ela mostra a porcentagem de exames que deram positivo. Se essa taxa sobe, é sinal de que o parasita está circulando com força entre os cães da região.</li>
-            <li><strong>Imóveis Borrifados:</strong> Número de casas que receberam a aplicação de inseticida para eliminar o mosquito palha (vetor da doença).</li>
+            <li><strong>Taxa de Positividade (%):</strong> Proporção de cães doentes entre todos os que foram testados no ano. Funciona como um "termômetro". Se essa taxa sobe, é um sinal de que a leishmaniose está circulando com mais intensidade entre os animais.</li>
+            <li><strong>Imóveis Borrifados:</strong> <b>Controle Vetorial</b>, ou seja, quantas casas receberam aplicação de inseticida (o famoso "fumacê" ou borrifação residual) para eliminar o mosquito palha transmissor da doença (vetor).</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -420,3 +420,4 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+

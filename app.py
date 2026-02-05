@@ -5,6 +5,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
 import logging
+# NOVA IMPORTAÇÃO NECESSÁRIA PARA O CORRIGIR O SCROLL
+import streamlit.components.v1 as components 
 
 # --- 0. CONFIGURAÇÃO DE LOGGING ---
 logging.basicConfig(level=logging.ERROR)
@@ -288,7 +290,7 @@ if st.session_state.segment == "Geral":
     <div class="info-box">
         <ul>
             <li><strong>Total Sorologias (Testes):</strong> Representa o esforço da vigilância em testar a população canina para identificar os animais infectados.</li>
-            <li><strong>Imóveis Borrifados:</strong> <b>Controle Vetorial</b>, ou seja, quantas casas receberam aplicação de inseticida (o famoso "fumacê" ou borrifação residual) para eliminar o mosquito palha, transmissor da doença (vetor).</li>
+            <li><strong>Imóveis Borrifados:</strong> <b>Controle Vetorial</b>, ou seja, quantas casas receberam aplicação de inseticida (o famoso "fumacê" ou borrifação residual) para eliminar o mosquito palha transmissor da doença (vetor).</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -378,6 +380,11 @@ elif st.session_state.segment == "Canina":
     st.plotly_chart(fig_v, use_container_width=True)
 
 elif st.session_state.segment == "Mapa":
+    # -----------------------------------------------------
+    # FIX DE SCROLL: Força o navegador a ir para o topo
+    # -----------------------------------------------------
+    components.html("<script>window.scrollTo(0,0);</script>", height=0, width=0)
+
     st.subheader(f"Distribuição Geográfica | {ano_sel}")
 
     st.markdown("""
@@ -483,5 +490,3 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
-
-

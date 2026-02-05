@@ -340,10 +340,9 @@ elif st.session_state.segment == "Mapa":
     st.markdown("""
     <div class="info-box">
         <span class="info-title">Como ler este mapa?</span>
-        Utilizamos uma escala de cores segura (Viridis) para identificar onde a doença está mais ativa.
         <ul>
-            <li><span style='background-color: #FDE725; padding: 0 5px; color: black;'><b>Amarelo / Claro:</b></span> Regiões com <b>menos casos</b>.</li>
-            <li><span style='background-color: #440154; padding: 0 5px; color: white;'><b>Roxo / Escuro:</b></span> Regiões com <b>maior concentração de casos</b> (Alerta).</li>
+            <li><span style='background-color: #FDE725; padding: 0 5px; color: black;'><b>Amarelo / Claro/ Círculos menores:</b></span> Regiões com <b>menos casos</b>.</li>
+            <li><span style='background-color: #440154; padding: 0 5px; color: white;'><b>Roxo / Escuro / Círculos maiores:</b></span> Regiões com <b>maior concentração de casos</b> (Alerta).</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -385,7 +384,9 @@ elif st.session_state.segment == "Historico":
             <li><span style='color:#C2410C; font-weight:bold;'>● Linha Laranja (Eixo Esquerdo):</span> <strong>Cães Positivos</strong>.</li>
             <li><span style='color:#5D3A9B; font-weight:bold;'>● Linha Roxa (Eixo Direito):</span> <strong>Casos Humanos</strong>.</li>
         </ul>
-        Observe como as curvas frequentemente se acompanham.
+        Este gráfico permite visualizar a conexão ao longo do tempo. Geralmente, um aumento no número de cães infectados
+        pode preceder ou acompanhar o aumento de casos em humanos. O controle da doença nos animais é essencial para proteger as pessoas.
+    </div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -420,4 +421,5 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 

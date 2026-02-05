@@ -206,7 +206,7 @@ if st.session_state.segment == "Geral":
         <span class="info-title">Entenda os Dados</span>
         Aqui você tem um resumo rápido da situação da doença no ano selecionado:
         <ul>
-            <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com Leishmaniose no ano selecionado.</li>
+            <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com leishmaniose no ano selecionado.</li>
             <li><strong>Letalidade (%):</strong> Indica a gravidade dos casos. Se este número aumenta, significa que a doença está sendo mais fatal. <br><i><b>Nota:</b> Valores acima de 10% aparecem com alerta em laranja ⚠️.</i></li>
             <li><strong>Cães Positivos:</strong> Quantidade de animais que fizeram o exame e tiveram a doença confirmada.</li>
             <li><strong>Taxa de Positividade (%):</strong> Proporção de cães doentes entre todos os que foram testados no ano. Funciona como um "termômetro". Se essa taxa sobe, é um sinal de que a leishmaniose está circulando com mais intensidade entre os animais.</li>
@@ -277,13 +277,13 @@ elif st.session_state.segment == "Canina":
     st.markdown("""
     <div class="info-box">
         <span class="info-title">Por que monitoramos os cães?</span>
-        Em áreas urbanas, o cão é o principal <b>reservatório</b> da doença. O monitoramento contínuo permite ações rápidas.
+        Em áreas urbanas, o cão é a principal fonte de infecção. O mosquito pica o cão doente e depois transmite, através da picada, para o ser humano.
         <br><br>
         <b>Guia visual do gráfico:</b>
         <ul>
-            <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas:</span> <strong>Cães Positivos</strong> (Confirmados com a doença).</li>
-            <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas:</span> <strong>Eutanásias</strong> (Controle de reservatório).</li>
-            <li><span style='color:#117733; font-weight:bold;'>● Linha Verde:</span> <strong>Total de Testes</strong> (Volume de trabalho da vigilância).</li>
+            <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas:</span> <strong>Cães Positivos</strong> Cães que foram confirmados com a doença.</li>
+            <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas:</span> <strong>Eutanásias</strong> Medida de controle recomendada pelo Ministério da Saúde para cães positivos, visando reduzir a transmissão.</li>
+            <li><span style='color:#117733; font-weight:bold;'>● Linha Verde:</span> <strong>Total de Testes</strong> Controle químico aplicado nos imóveis para eliminar o mosquito vetor.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -421,5 +421,6 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 

@@ -288,7 +288,7 @@ if st.session_state.segment == "Geral":
     <div class="info-box">
         <ul>
             <li><strong>Total Sorologias (Testes):</strong> Representa o esforço da vigilância em testar a população canina para identificar os animais infectados.</li>
-            <li><strong>Imóveis Borrifados:</strong> <b>Controle Vetorial</b>, ou seja, quantas casas receberam aplicação de inseticida (o famoso "fumacê" ou borrifação residual) para eliminar o mosquito palha transmissor da doença (vetor).</li>
+            <li><strong>Imóveis Borrifados:</strong> <b>Controle Vetorial</b>, ou seja, quantas casas receberam aplicação de inseticida (o famoso "fumacê" ou borrifação residual) para eliminar o mosquito palha, transmissor da doença (vetor).</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -483,4 +483,5 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 

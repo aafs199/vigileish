@@ -379,9 +379,9 @@ elif st.session_state.segment == "Canina":
     st.plotly_chart(fig_v, use_container_width=True)
 
 elif st.session_state.segment == "Mapa":
-    # -----------------------------------------------------
-    # FIX DE SCROLL: Força o navegador a ir para o topo
-    # -----------------------------------------------------
+    # ----------------
+    # FIX DE SCROLL
+    # ----------------
     components.html("""
         <script>
             var body = window.parent.document.querySelector(".main");
@@ -410,7 +410,7 @@ elif st.session_state.segment == "Mapa":
     
     df_f = df_m[df_m['Ano'] == ano_sel]
     if not df_f.empty:
-        # MAPA AGORA COM HOVER_NAME E HOVER_DATA LIMPO
+        # MAPA COM HOVER_NAME E HOVER_DATA LIMPO
         fig = px.scatter_mapbox(df_f, lat="Lat", lon="Lon", size="Casos", color="Casos", zoom=10, 
                                 mapbox_style="carto-positron", 
                                 color_continuous_scale="Viridis_r",
@@ -495,3 +495,4 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+

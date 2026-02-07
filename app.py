@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
 import logging
-# NOVA IMPORTAÇÃO NECESSÁRIA PARA O CORRIGIR O SCROLL
 import streamlit.components.v1 as components 
 
 # --- 0. CONFIGURAÇÃO DE LOGGING ---
@@ -383,7 +382,13 @@ elif st.session_state.segment == "Mapa":
     # -----------------------------------------------------
     # FIX DE SCROLL: Força o navegador a ir para o topo
     # -----------------------------------------------------
-    components.html("<script>window.scrollTo(0,0);</script>", height=0, width=0)
+    components.html("""
+        <script>
+            var body = window.parent.document.querySelector(".main");
+            if (body) { body.scrollTop = 0; }
+            window.parent.scrollTo(0, 0);
+        </script>
+    """, height=0, width=0)
 
     st.subheader(f"Distribuição Geográfica | {ano_sel}")
 

@@ -219,6 +219,18 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
+# -----------------------------------------------------
+# FIX DE SCROLL GLOBAL: Força o navegador a ir para o topo
+# Executado sempre que a página recarrega (clique em botão)
+# -----------------------------------------------------
+components.html("""
+    <script>
+        var body = window.parent.document.querySelector(".main");
+        if (body) { body.scrollTop = 0; }
+        window.parent.scrollTo(0, 0);
+    </script>
+""", height=0, width=0)
+
 # --- 7. CONTEÚDO ---
 if st.session_state.segment == "Geral":
     st.subheader(f"Visão Consolidada | {ano_sel}")
@@ -393,15 +405,6 @@ elif st.session_state.segment == "Canina":
     st.plotly_chart(fig_v, use_container_width=True)
 
 elif st.session_state.segment == "Mapa":
-    # FIX DE SCROLL
-    components.html("""
-        <script>
-            var body = window.parent.document.querySelector(".main");
-            if (body) { body.scrollTop = 0; }
-            window.parent.scrollTo(0, 0);
-        </script>
-    """, height=0, width=0)
-
     st.subheader(f"Distribuição Geográfica | {ano_sel}")
 
     st.markdown("""
@@ -508,5 +511,3 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
-
-

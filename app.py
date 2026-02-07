@@ -255,17 +255,27 @@ navegacao = st.radio(
 # FIX DE SCROLL GLOBAL
 # Atrelado à variável 'navegacao' para resetar scroll ao trocar de aba
 # -----------------------------------------------------
+# -----------------------------------------------------
+# FIX DE SCROLL GLOBAL
+# Truque: Inserimos a variável {navegacao} dentro do HTML (comentário)
+# Isso força o Streamlit a recarregar o script sempre que você muda de aba.
+# -----------------------------------------------------
 components.html(
     f"""
         <script>
+            // Força a rolagem para o topo da janela principal
             window.parent.scrollTo(0, 0);
+            
+            // Tenta encontrar o container principal e rolar também
             var main = window.parent.document.querySelector(".main");
+            var container = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            
             if (main) {{ main.scrollTop = 0; }}
+            if (container) {{ container.scrollTop = 0; }}
         </script>
-    """,
+        """,
     height=0,
-    width=0,
-    key=f"scroll_fix_{navegacao}" 
+    width=0
 )
 
 # --- 7. CONTEÚDO (LOGICA BASEADA NO NOVO MENU) ---
@@ -545,3 +555,4 @@ elif navegacao == "Tendências Históricas":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+

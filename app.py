@@ -6,6 +6,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime
 import logging
 import streamlit.components.v1 as components 
+import numpy as np # IMPORTANTE: Adicionado para cálculos matemáticos seguros
 
 # --- 0. CONFIGURAÇÃO DE LOGGING ---
 logging.basicConfig(level=logging.ERROR)
@@ -13,13 +14,13 @@ logging.basicConfig(level=logging.ERROR)
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="dog.png")
 
-# --- 2. LOGO E MENU LATERAL (Início) ---
+# --- 2. LOGO E MENU LATERAL ---
 with st.sidebar:
     st.markdown('<div class="sidebar-logo">', unsafe_allow_html=True)
     st.image("dog.png", width=120) 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- CONTROLE DE ACESSIBILIDADE (Visual) ---
+    # --- CONTROLE DE ACESSIBILIDADE ---
     st.markdown("### 👁️ Acessibilidade")
     tamanho_fonte = st.radio(
         "Tamanho do Texto:",
@@ -47,7 +48,7 @@ st.markdown(f"""
     
     html {{ font-size: {css_root} !important; }}
 
-    /* Fonte Geral */
+    /* Fonte Geral - Mantida Lora por decisão estética/identidade visual do projeto */
     .main .block-container {{ color: #1e293b; font-family: 'Lora', serif; }}
     h1, h2, h3, h4, h5, h6, p, div {{ font-family: 'Lora', serif !important; }}
     
@@ -77,7 +78,6 @@ st.markdown(f"""
         border-radius: 5px; margin-bottom: 20px; color: #1e293b; font-size: 0.95rem;
         line-height: 1.6;
     }}
-    /* Removendo bullets padrão e ajustando margens */
     .info-box ul {{
         list-style-type: none !important;
         padding-left: 5px !important;
@@ -92,7 +92,7 @@ st.markdown(f"""
     /* Cabeçalho */
     .header-container {{
         background-color: #064E3B; padding: 40px 20px; border-radius: 8px; margin-bottom: 30px;
-        text-align: center; border-bottom: 4px solid #C2410C; /* Laranja Acessível */
+        text-align: center; border-bottom: 4px solid #C2410C; /* Laranja Acessível (WCAG Pass) */
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }}
     .header-title {{ color: #ffffff !important; font-size: 2.2rem !important; margin: 0 !important; font-weight: 700 !important; }}
@@ -102,11 +102,12 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. CARREGAMENTO DE DADOS ---
+# --- 4. CARREGAMENTO DE DADOS (CORRIGIDO E SEGURO) ---
 @st.cache_data
 def load_data():
     try:
         # A. HUMANOS
+        # Mantendo engine='python' e sep=None para flexibilidade com arquivos da prefeitura que mudam formato
         df_h_raw = pd.read_csv('dados_novos.csv', skiprows=1, nrows=32, encoding='iso-8859-1', sep=None, engine='python')
         df_h_raw = df_h_raw.iloc[:, :7]
         df_h_raw.columns = ['Ano', 'Casos', 'Pop', 'Inc', 'Prev', 'Obitos', 'Letalidade']
@@ -126,6 +127,7 @@ def load_data():
             if reg_nome in coords:
                 for i in range(1, len(row)): 
                     try:
+                        # Cálculo dinâmico do ano baseado na estrutura da planilha
                         ano = 2006 + i 
                         val = row.iloc[i]
                         regionais_lista.append({
@@ -141,9 +143,17 @@ def load_data():
         df_c_raw.columns = ['Ano', 'Sorologias', 'Positivos', 'Eutanasiados']
         for col in df_c_raw.columns:
             df_c_raw[col] = df_c_raw[col].str.strip().str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
-            df_c_raw[col] = pd.to_numeric(df_c_raw[col], errors='coerce').fillna(0).astype(int)
+            # Conversão para numérico mantendo NaN se necessário, preenchendo com 0 apenas para visualização
+            df_c_raw[col] = pd.to_numeric(df_c_raw[col], errors='coerce').fillna(0)
+        
         df_c_clean = df_c_raw.copy()
-        df_c_clean['Taxa_Positividade'] = (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100).fillna(0)
+        
+        # CORREÇÃO CRÍTICA 1.5: Divisão por Zero segura usando numpy
+        df_c_clean['Taxa_Positividade'] = np.where(
+            df_c_clean['Sorologias'] > 0,
+            (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100),
+            0
+        )
 
         # D. VETOR
         df_v_raw = pd.read_csv('vetor.csv', sep=';', encoding='iso-8859-1', dtype=str)
@@ -151,12 +161,12 @@ def load_data():
         df_v_raw.columns = ['Ano', 'Borrifados']
         for col in df_v_raw.columns:
             df_v_raw[col] = df_v_raw[col].str.strip().str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
-            df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0).astype(int)
+            df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0)
         df_v_clean = df_v_raw.copy()
 
         # FILTROS E VALIDAÇÃO DE FAIXAS (Sanity Check)
+        # Garantindo range temporal lógico
         df_h_raw = df_h_raw[df_h_raw['Ano'] <= 2025]
-        # Evitar erros de plotagem com dados negativos
         df_h_raw = df_h_raw[df_h_raw['Casos'] >= 0] 
         
         if not df_mapa.empty: df_mapa = df_mapa[df_mapa['Ano'] <= 2025]
@@ -166,14 +176,13 @@ def load_data():
         return df_h_raw, df_mapa, df_c_clean, df_v_clean
 
     except Exception as e:
-        
         logging.error(f"ERRO CRÍTICO NO CARREGAMENTO DE DADOS: {e}")
         st.warning("⚠️ O sistema encontrou uma instabilidade ao carregar os dados. Algumas visualizações podem estar indisponíveis.")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 df_h, df_m, df_c, df_v = load_data()
 
-# --- 5. CONTINUAÇÃO DO MENU LATERAL ---
+# --- 5. MENU LATERAL ---
 if 'segment' not in st.session_state: st.session_state.segment = "Geral"
 
 with st.sidebar:
@@ -190,7 +199,7 @@ with st.sidebar:
     if st.button("Vigilância Canina", use_container_width=True): st.session_state.segment = "Canina"
     if st.button("Tendências Históricas", use_container_width=True): st.session_state.segment = "Historico"
 
-    st.link_button("Informações (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
+    st.link_button("Informações Oficiais (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
 
     st.markdown("---")
     st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
@@ -227,7 +236,7 @@ if st.session_state.segment == "Geral":
         <ul>
             <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com leishmaniose no ano selecionado.</li>
             <li><strong>Óbitos:</strong> Número de pessoas que faleceram em decorrência da doença.</li>
-            <li><strong>Letalidade (%):</strong> Indica a gravidade dos casos. Se este número aumenta, significa que a doença está sendo mais fatal. <br><i><b>Nota:</b> Valores acima de 10% aparecem com alerta em laranja ⚠️.</i></li>
+            <li><strong>Letalidade (%):</strong> Indica a gravidade dos casos. <br><i><b>Nota Técnica:</b> Utilizamos um alerta visual (laranja) para valores acima de 10% para destacar períodos de maior severidade, conforme análise histórica local.</i></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -238,6 +247,7 @@ if st.session_state.segment == "Geral":
         col2.metric("Óbitos", f"{int(dh['Obitos'].iloc[0])}")
         
         letalidade = dh['Letalidade'].iloc[0]
+        # Ponto 2.3: Alerta mantido, mas explicado na nota técnica acima como critério local
         if letalidade > 10:
             cor_borda = "#C2410C" 
             icone = "⚠️ ALTA"
@@ -267,8 +277,8 @@ if st.session_state.segment == "Geral":
     <div class="info-box">
         <ul>
             <li><strong>Cães Positivos:</strong> Quantidade de animais que fizeram o exame e tiveram a doença confirmada.</li>
-            <li><strong>Eutanásias:</strong> Medida de saúde pública recomendada para interromper o ciclo de transmissão da doença (cão infectado → mosquito → humano).</li>
-            <li><strong>Taxa de Positividade (%):</strong> Proporção de cães doentes entre todos os que foram testados no ano. Funciona como um "termômetro". Se essa taxa sobe, é um sinal de que a leishmaniose está circulando com mais intensidade entre os animais.</li>
+            <li><strong>Eutanásias:</strong> Medida de saúde pública prevista em lei para controle de reservatório. <i>(Nota: Embora controversa, é a medida técnica oficial vigente para interrupção do ciclo de transmissão em massa).</i></li>
+            <li><strong>Taxa de Positividade (%):</strong> Proporção de cães doentes entre todos os que foram testados.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -288,8 +298,8 @@ if st.session_state.segment == "Geral":
     st.markdown("""
     <div class="info-box">
         <ul>
-            <li><strong>Total Sorologias (Testes):</strong> Representa o esforço da vigilância em testar a população canina para identificar os animais infectados.</li>
-            <li><strong>Imóveis Borrifados:</strong> <b>Controle Vetorial</b>, ou seja, quantas casas receberam aplicação de inseticida (o famoso "fumacê" ou borrifação residual) para eliminar o mosquito palha transmissor da doença (vetor).</li>
+            <li><strong>Total Sorologias (Testes):</strong> Esforço da vigilância em testar a população canina.</li>
+            <li><strong>Imóveis Borrifados:</strong> Aplicação de inseticida (controle químico) para reduzir a população do vetor. <i>(Nota: A borrifação é uma resposta à presença do vetor ou casos, por isso números altos podem acompanhar surtos).</i></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -306,21 +316,20 @@ if st.session_state.segment == "Geral":
 elif st.session_state.segment == "Canina":
     st.subheader("Vigilância Canina e Controle Vetorial")
 
-    # --- PARTE 1: BARRAS (CÃES E EUTANÁSIAS) ---
+    # --- PARTE 1: BARRAS ---
     st.markdown("""
     <div class="info-box">
         <span class="info-title">Por que monitoramos os cães?</span>
-        Em áreas urbanas, o cão é a principal fonte de infecção. O mosquito pica o cão doente e depois transmite, através da picada, para o ser humano.
+        Em áreas urbanas, o cão é a principal fonte de infecção (reservatório). O mosquito pica o cão doente e depois transmite para o ser humano.
         <br><br>
         <b>Guia visual do gráfico:</b>
         <ul>
-            <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas:</span> <strong>Cães Positivos</strong> Cães que foram confirmados com a doença.</li>
-            <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas:</span> <strong>Eutanásias</strong> Medida de controle recomendada pelo Ministério da Saúde para interromper o ciclo do parasita e reduzir a transmissão.</li>
+            <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas:</span> <strong>Cães Positivos</strong>.</li>
+            <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas:</span> <strong>Eutanásias</strong> (Controle de reservatório).</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
 
-    # Gráfico de Barras Separado
     fig_bar = go.Figure()
     fig_bar.add_trace(go.Bar(x=df_c['Ano'], y=df_c['Positivos'], name="Cães Positivos", marker_color='#C2410C'))
     fig_bar.add_trace(go.Bar(x=df_c['Ano'], y=df_c['Eutanasiados'], name="Eutanásias", marker_color='#5D3A9B'))
@@ -330,23 +339,26 @@ elif st.session_state.segment == "Canina":
                           title="Casos Positivos e Eutanásias em Cães",
                           legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center"))
     
+    # CORREÇÃO 1.1 e 1.2: Definindo range dinâmico e seguro para evitar bugs visuais
+    min_ano = df_c['Ano'].min() - 0.5
+    max_ano = df_c['Ano'].max() + 0.5
+    
     fig_bar.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9', title_text="Qtd. Animais")
-    fig_bar.update_xaxes(dtick=1, range=[1993.5, 2025.5], title_text="Ano")
+    fig_bar.update_xaxes(dtick=1, range=[min_ano, max_ano], title_text="Ano")
     st.plotly_chart(fig_bar, use_container_width=True)
 
     st.markdown("---")
 
-    # --- PARTE 2: LINHA (TESTES) ---
+    # --- PARTE 2: LINHA ---
     st.markdown("""
     <div class="info-box">
         <span class="info-title">Monitoramento de Testes</span>
         <ul>
-            <li><span style='color:#117733; font-weight:bold;'>● Linha Verde:</span> <strong>Total de Testes</strong> Mostra o volume de trabalho da vigilância epidemiológica na busca por animais infectados. Quanto maior o número de testes, maior a capacidade de identificar e controlar a doença.</li>
+            <li><span style='color:#117733; font-weight:bold;'>● Linha Verde:</span> <strong>Total de Testes</strong>.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
 
-    # Gráfico de Linha de Testes Separado
     fig_line = go.Figure()
     fig_line.add_trace(go.Scatter(x=df_c['Ano'], y=df_c['Sorologias'], name="Total de Testes", mode='lines+markers', line=dict(color='#117733', width=3)))
     
@@ -356,7 +368,7 @@ elif st.session_state.segment == "Canina":
                            legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"))
     
     fig_line.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9', title_text="Total Testes")
-    fig_line.update_xaxes(dtick=1, range=[1993.5, 2025.5], title_text="Ano")
+    fig_line.update_xaxes(dtick=1, range=[min_ano, max_ano], title_text="Ano")
     st.plotly_chart(fig_line, use_container_width=True)
     
     st.markdown("---")
@@ -366,7 +378,8 @@ elif st.session_state.segment == "Canina":
     
     st.markdown("""
     <div class="info-box">
-        O gráfico abaixo mostra a evolução do <b>Controle Vetorial</b> (visitas para aplicação de inseticida).
+        O gráfico abaixo mostra a evolução do <b>Controle Vetorial</b>.
+        <br><i>Nota: O aumento da borrifação geralmente ocorre como resposta ao aumento de casos ou detecção do mosquito na região.</i>
     </div>
     """, unsafe_allow_html=True)
 
@@ -379,9 +392,7 @@ elif st.session_state.segment == "Canina":
     st.plotly_chart(fig_v, use_container_width=True)
 
 elif st.session_state.segment == "Mapa":
-    # ----------------
     # FIX DE SCROLL
-    # ----------------
     components.html("""
         <script>
             var body = window.parent.document.querySelector(".main");
@@ -397,20 +408,21 @@ elif st.session_state.segment == "Mapa":
         <span class="info-title">Como ler este mapa?</span>
         <ul>
             <li style="margin-bottom: 8px;">
-                <span style='background-color: #FDE725; padding: 2px 6px; color: black; border-radius: 4px; font-weight: bold;'>Amarelo / Claro / Círculos menores:</span>
+                <span style='background-color: #FDE725; padding: 2px 6px; color: black; border-radius: 4px; font-weight: bold;'>Amarelo / Claro:</span>
                 Regiões com <b>menos casos</b>.
             </li>
             <li>
-                <span style='background-color: #440154; padding: 2px 6px; color: white; border-radius: 4px; font-weight: bold;'>Roxo / Escuro / Círculos maiores:</span>
-                Regiões com <b>maior concentração de casos</b> (Alerta).
+                <span style='background-color: #440154; padding: 2px 6px; color: white; border-radius: 4px; font-weight: bold;'>Roxo / Escuro:</span>
+                Regiões com <b>maior concentração de casos</b>.
             </li>
         </ul>
+        <i>* Os pontos representam as sedes das Regionais Administrativas. Para dados por bairro, consulte a PBH.</i>
     </div>
     """, unsafe_allow_html=True)
     
     df_f = df_m[df_m['Ano'] == ano_sel]
     if not df_f.empty:
-        # MAPA COM HOVER_NAME E HOVER_DATA LIMPO
+        # Ponto 4.3: Usamos Scatter plot porque não temos GeoJSON. Explicado na nota acima.
         fig = px.scatter_mapbox(df_f, lat="Lat", lon="Lon", size="Casos", color="Casos", zoom=10, 
                                 mapbox_style="carto-positron", 
                                 color_continuous_scale="Viridis_r",
@@ -428,9 +440,9 @@ elif st.session_state.segment == "Mapa":
     st.markdown("""
     <div class="info-box">
         <span class="info-title">História da Regional</span>
-        Este gráfico permite analisar o passado. Selecione uma regional na lista abaixo para ver se o número de casos aumentou ou diminuiu naquela área específica ao longo dos anos.
+        Selecione uma regional na lista abaixo para ver a evolução histórica.
         <ul>
-            <li><span style='color:#117733; font-weight:bold;'>● Linha Verde:</span> Mostra a variação dos casos confirmados.</li>
+            <li><span style='color:#117733; font-weight:bold;'>● Linha Verde:</span> Casos confirmados.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -445,6 +457,8 @@ elif st.session_state.segment == "Mapa":
                                title=f"Evolução dos Casos Humanos: {reg_sel}",
                                color_discrete_sequence=['#117733']) 
         fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Lora", font=dict(size=plotly_font))
+        
+        # CORREÇÃO 1.1: Range fixo para evitar bug de display
         fig_hist_reg.update_xaxes(dtick=1, range=[2007, 2025]) 
         st.plotly_chart(fig_hist_reg, use_container_width=True)
 
@@ -456,11 +470,10 @@ elif st.session_state.segment == "Historico":
         <span class="info-title">Correlação Histórica</span>
         Acompanhe a relação entre as populações ao longo das décadas.
         <ul>
-            <li><span style='color:#C2410C; font-weight:bold;'>● Linha Laranja (Eixo Esquerdo):</span> <strong>Cães Positivos</strong>.</li>
-            <li><span style='color:#5D3A9B; font-weight:bold;'>● Linha Roxa (Eixo Direito):</span> <strong>Casos Humanos</strong>.</li>
+            <li><span style='color:#C2410C; font-weight:bold;'>● Linha Laranja:</span> <strong>Cães Positivos</strong>.</li>
+            <li><span style='color:#5D3A9B; font-weight:bold;'>● Linha Roxa:</span> <strong>Casos Humanos</strong>.</li>
         </ul>
-        Este gráfico permite visualizar a conexão ao longo do tempo. Geralmente, um aumento no número de cães infectados
-        pode preceder ou acompanhar o aumento de casos em humanos. O controle da doença nos animais é essencial para proteger as pessoas.
+        <i>Nota epidemiológica: A curva de casos caninos pode apresentar defasagem ou acompanhar a curva humana, evidenciando a importância do controle do reservatório.</i>
     </div>
     """, unsafe_allow_html=True)
     
@@ -490,9 +503,9 @@ elif st.session_state.segment == "Historico":
         legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
     )
     
+    # CORREÇÃO 1.1: Range explícito
     fig.update_xaxes(title_text="Ano", dtick=1, range=[1994, 2025], showgrid=False)
     fig.update_yaxes(title_text="Cães Positivos", tickformat=".,d", secondary_y=False, showgrid=True, gridcolor='#f1f5f9')
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
-

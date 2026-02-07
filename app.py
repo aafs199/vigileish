@@ -94,7 +94,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. CARREGAMENTO DE DADOS (MANTENDO A ROBUSTEZ TÉCNICA) ---
+# --- 4. CARREGAMENTO DE DADOS ---
 @st.cache_data
 def load_data():
     try:
@@ -105,7 +105,7 @@ def load_data():
         df_h_raw['Ano'] = pd.to_numeric(df_h_raw['Ano'], errors='coerce')
         df_h_raw = df_h_raw.dropna(subset=['Ano'])
         
-        # CÁLCULO ESTATÍSTICO (Média + 2DP) - Mantido para garantir o alerta correto
+        # CÁLCULO ESTATÍSTICO (Média + 2DP)
         media_let = df_h_raw['Letalidade'].mean()
         dp_let = df_h_raw['Letalidade'].std()
         limiar_letalidade = media_let + (2 * dp_let)
@@ -208,6 +208,7 @@ with st.sidebar:
     st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
     st.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
     st.caption(f"Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
+    st.caption(f"O painel apresenta análise descritiva dos dados oficiais, sem inferência causal, utilizando estatística básica e visualização interativa para apoio à vigilância epidemiológica.)
     st.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")
 
 # --- 6. CABEÇALHO ---
@@ -329,7 +330,7 @@ elif st.session_state.segment == "Canina":
         <b>Guia visual do gráfico:</b>
         <ul>
             <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas:</span> <strong>Cães Positivos</strong> Cães que foram confirmados com a doença.</li>
-            <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas:</span> <strong>Eutanásias</strong> Medida de controle recomendada pelo Ministério da Saúde para interromper o ciclo do parasita e reduzir a transmissão.</li>
+            <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas:</span> <strong>Eutanásias:</strong> Medida de saúde pública para controle de reservatório. <br><i>(<b>Nota:</b> Embora controversa, é a medida técnica oficial vigente para interrupção do ciclo de transmissão em massa).</i>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -507,3 +508,4 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+

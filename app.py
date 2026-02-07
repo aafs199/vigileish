@@ -41,10 +41,10 @@ with st.sidebar:
 
     st.markdown("---")
 
-# --- 3. ESTILO CSS DINÂMICO (ATUALIZADO PARA SANS-SERIF) ---
+# --- 3. ESTILO CSS DINÂMICO ---
 st.markdown(f"""
     <style>
-    /* Mudança para Source Sans Pro (Mais técnico e limpo para dados) */
+    /* Fonte Source Sans Pro: Moderna, limpa e técnica, mas fácil de ler */
     @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
     
     html {{ font-size: {css_root} !important; }}
@@ -78,7 +78,7 @@ st.markdown(f"""
         margin-top: 10px !important;
     }}
     .info-box li {{
-        margin-bottom: 10px !important;
+        margin-bottom: 12px !important; /* Espaçamento maior para facilitar leitura */
     }}
     
     .info-title {{ color: #117733; font-weight: bold; margin-bottom: 8px; display: block; font-size: 1.15rem; }}
@@ -94,7 +94,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. CARREGAMENTO DE DADOS (COM CORREÇÕES DE SEGURANÇA) ---
+# --- 4. CARREGAMENTO DE DADOS (BLINDADO) ---
 @st.cache_data
 def load_data():
     try:
@@ -105,7 +105,7 @@ def load_data():
         df_h_raw['Ano'] = pd.to_numeric(df_h_raw['Ano'], errors='coerce')
         df_h_raw = df_h_raw.dropna(subset=['Ano'])
         
-        # CÁLCULO ESTATÍSTICO (Média + 2DP) - Mantido pois é robusto para graduação
+        # CÁLCULO ESTATÍSTICO (Média + 2DP)
         media_let = df_h_raw['Letalidade'].mean()
         dp_let = df_h_raw['Letalidade'].std()
         limiar_letalidade = media_let + (2 * dp_let)
@@ -119,7 +119,6 @@ def load_data():
         }
         regionais_lista = []
         
-        # Identificação dinâmica de colunas de ano
         cols = df_reg_raw.columns
         anos_cols = []
         for c in cols:
@@ -137,7 +136,6 @@ def load_data():
                     try:
                         ano = int(col_ano)
                         val = row[col_ano]
-                        # CORREÇÃO DE SEGURANÇA: Parsing explícito + fillna
                         val_num = pd.to_numeric(val, errors='coerce')
                         if pd.isna(val_num): val_num = 0
                         
@@ -158,7 +156,7 @@ def load_data():
         
         df_c_clean = df_c_raw.copy()
         
-        # Divisão segura com numpy
+        # Divisão segura
         df_c_clean['Taxa_Positividade'] = np.where(
             df_c_clean['Sorologias'] > 0,
             (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100),
@@ -226,7 +224,7 @@ if st.session_state.segment == "Geral":
 
     st.markdown("""
     <div style="margin-bottom: 20px;">
-        Abaixo apresentamos um resumo rápido da situação da doença no ano selecionado, dividido por categorias:
+        Este painel apresenta um resumo simplificado da situação da Leishmaniose Visceral em Belo Horizonte, permitindo que a população acompanhe a evolução da doença.
     </div>
     """, unsafe_allow_html=True)
     
@@ -235,13 +233,15 @@ if st.session_state.segment == "Geral":
     dv = df_v[df_v['Ano']==ano_sel]
     
     # --- BLOCO 1: SAÚDE HUMANA ---
-    st.markdown("##### 1. Indicadores Humanos")
+    st.markdown("##### 1. Saúde Humana (Impacto na População)")
     st.markdown(f"""
     <div class="info-box">
         <ul>
-            <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com leishmaniose no ano selecionado.</li>
-            <li><strong>Óbitos:</strong> Número de pessoas que faleceram em decorrência da doença.</li>
-            <li><strong>Letalidade (%):</strong> Indica a gravidade. <br><i><b>Nota Técnica:</b> O alerta (laranja) é acionado estatisticamente quando a letalidade supera o limite histórico de {limiar_stat:.1f}% (Média + 2 Desvios Padrão).</i></li>
+            <li><strong>Casos Humanos:</strong> Total de pessoas que adoeceram e foram diagnosticadas neste ano.</li>
+            <li><strong>Óbitos:</strong> Número de vidas perdidas para a doença.</li>
+            <li><strong>Letalidade (%):</strong> Mede a gravidade da doença (quantos doentes faleceram). Se este número aumenta, indica que a doença está sendo mais agressiva ou que o diagnóstico está demorando.
+            <br><br>
+            <i><b>Nota Técnica:</b> Para fins de vigilância, o sistema emite um alerta automático (cor laranja) quando a letalidade ultrapassa o limite histórico de {limiar_stat:.1f}% (desvio padrão), indicando uma anomalia estatística.</i></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -277,13 +277,14 @@ if st.session_state.segment == "Geral":
     st.markdown("---")
 
     # --- BLOCO 2: RESERVATÓRIO CANINO ---
-    st.markdown("##### 2. Vigilância Canina")
+    st.markdown("##### 2. Vigilância Canina (Onde o ciclo começa)")
     st.markdown("""
     <div class="info-box">
+        O cão é a principal vítima e também o principal reservatório urbano da doença. O monitoramento animal é essencial para proteger os humanos.
         <ul>
-            <li><strong>Cães Positivos:</strong> Quantidade de animais que fizeram o exame e tiveram a doença confirmada.</li>
-            <li><strong>Eutanásias:</strong> Medida de saúde pública para controle de reservatório (conforme diretrizes do MS).</li>
-            <li><strong>Taxa de Positividade (%):</strong> Proporção de cães doentes entre todos os que foram testados.</li>
+            <li><strong>Cães Positivos:</strong> Quantidade de animais confirmados com a doença após exames.</li>
+            <li><strong>Taxa de Positividade (%):</strong> Funciona como um "termômetro". Mostra a porcentagem de exames que deram positivo. Se essa taxa sobe, é sinal de que o parasita está circulando com força entre os cães da região.</li>
+            <li><strong>Eutanásias:</strong> Procedimento realizado conforme diretrizes do Ministério da Saúde para interromper o ciclo de transmissão (Cão → Mosquito → Humano).</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -299,12 +300,13 @@ if st.session_state.segment == "Geral":
     st.markdown("---")
 
     # --- BLOCO 3: AÇÕES DE CONTROLE ---
-    st.markdown("##### 3. Ações de Controle e Testes")
+    st.markdown("##### 3. Ações de Combate e Prevenção")
     st.markdown("""
     <div class="info-box">
         <ul>
-            <li><strong>Total Sorologias (Testes):</strong> Esforço da vigilância em testar a população canina.</li>
-            <li><strong>Imóveis Borrifados:</strong> Aplicação de inseticida (controle químico). Ações geralmente reativas à detecção de casos ou vetores.</li>
+            <li><strong>Total Sorologias (Testes):</strong> Representa o esforço da prefeitura em testar e monitorar a população canina da cidade.</li>
+            <li><strong>Imóveis Borrifados:</strong> Casas que receberam o famoso "fumacê" (aplicação de inseticida nas paredes) para matar o mosquito palha. 
+            <br><i><b>Nota:</b> Geralmente, o número de borrifações aumenta como *resposta* ao aparecimento de casos ou do mosquito em uma área.</i></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -324,13 +326,13 @@ elif st.session_state.segment == "Canina":
     # --- PARTE 1: BARRAS ---
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">Por que monitoramos os cães?</span>
-        Em áreas urbanas, o cão é a principal fonte de infecção (reservatório).
+        <span class="info-title">O Papel do Cão no Ciclo da Doença</span>
+        Na cidade, o cão é o hospedeiro onde o parasita se reproduz. O mosquito pica o cão infectado e depois transmite a doença para humanos e outros cães. Por isso, controlar a infecção canina é a forma mais eficiente de prevenir casos humanos.
         <br><br>
-        <b>Guia visual do gráfico:</b>
+        <b>Entenda o gráfico:</b>
         <ul>
-            <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas:</span> <strong>Cães Positivos</strong>.</li>
-            <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas:</span> <strong>Eutanásias</strong>.</li>
+            <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas (Casos):</span> Mostram quantos cães foram confirmados doentes naquele ano.</li>
+            <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas (Eutanásias):</span> Mostram as ações de controle realizadas para conter surtos.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -341,10 +343,10 @@ elif st.session_state.segment == "Canina":
     
     fig_bar.update_layout(height=400, plot_bgcolor='white', font_family="Source Sans Pro", barmode='group',
                           font=dict(size=plotly_font),
-                          title="Casos Positivos e Eutanásias em Cães",
+                          title="Evolução dos Casos e Ações de Controle em Cães",
                           legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center"))
     
-    # CORREÇÃO: Margem de segurança de 0.5 para não cortar barras
+    # Range com margem
     fig_bar.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9', title_text="Qtd. Animais")
     fig_bar.update_xaxes(dtick=1, range=[min_ano-0.5, max_ano+0.5], title_text="Ano")
     st.plotly_chart(fig_bar, use_container_width=True)
@@ -354,9 +356,11 @@ elif st.session_state.segment == "Canina":
     # --- PARTE 2: LINHA ---
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">Monitoramento de Testes</span>
+        <span class="info-title">Volume de Testes Realizados</span>
+        A linha verde abaixo indica o <b>trabalho de campo</b> das equipes de zoonoses.
         <ul>
-            <li><span style='color:#117733; font-weight:bold;'>● Linha Verde:</span> <strong>Total de Testes</strong>.</li>
+            <li>Quanto mais testes são feitos, maior a chance de descobrir cães doentes e tratar ou controlar a situação antes que humanos sejam infectados.</li>
+            <li>Quedas na linha podem indicar falta de insumos ou mudanças na estratégia da prefeitura.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -366,7 +370,7 @@ elif st.session_state.segment == "Canina":
     
     fig_line.update_layout(height=400, plot_bgcolor='white', font_family="Source Sans Pro",
                            font=dict(size=plotly_font),
-                           title="Total de Sorologias (Testes) Realizados",
+                           title="Total de Sorologias (Testes) Realizados por Ano",
                            legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"))
     
     fig_line.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9', title_text="Total Testes")
@@ -376,12 +380,12 @@ elif st.session_state.segment == "Canina":
     st.markdown("---")
     
     # --- PARTE 3: BORRIFAÇÃO ---
-    st.subheader("Controle Químico (Imóveis Borrifados)")
+    st.subheader("Combate ao Mosquito (Vetor)")
     
     st.markdown("""
     <div class="info-box">
-        O gráfico abaixo mostra a evolução do <b>Controle Vetorial</b>.
-        <br><i>Análise Temporal: Picos de borrifação geralmente respondem a aumentos na detecção entomológica ou de casos.</i>
+        O gráfico abaixo mostra a aplicação de inseticida nos imóveis (o popular "fumacê" residual nas paredes).
+        <br><i><b>Importante:</b> O controle químico não é preventivo como uma vacina. Ele é usado para bloquear a transmissão quando já existem casos ou muitos mosquitos na área.</i>
     </div>
     """, unsafe_allow_html=True)
 
@@ -406,18 +410,19 @@ elif st.session_state.segment == "Mapa":
 
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">Como ler este mapa?</span>
+        <span class="info-title">Entenda o Mapa de Calor</span>
+        Este mapa ajuda a identificar quais Regionais Administrativas de Belo Horizonte concentraram mais casos no ano selecionado.
         <ul>
             <li style="margin-bottom: 8px;">
                 <span style='background-color: #FDE725; padding: 2px 6px; color: black; border-radius: 4px; font-weight: bold;'>Amarelo / Claro:</span>
-                Regiões com <b>menos casos</b>.
+                Regiões com <b>menor ocorrência</b> de casos registrados.
             </li>
             <li>
                 <span style='background-color: #440154; padding: 2px 6px; color: white; border-radius: 4px; font-weight: bold;'>Roxo / Escuro:</span>
-                Regiões com <b>maior concentração de casos</b>.
+                Regiões com <b>maior concentração</b> de casos (Pontos de Atenção).
             </li>
         </ul>
-        <i>* Nota: Visualização de dados absolutos. A densidade de casos deve ser interpretada considerando a população de cada regional.</i>
+        <i>* Nota: O tamanho dos círculos representa a quantidade absoluta de casos. Dados de bairros específicos não estão disponíveis por questões de privacidade da PBH.</i>
     </div>
     """, unsafe_allow_html=True)
     
@@ -439,8 +444,9 @@ elif st.session_state.segment == "Mapa":
 
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">História da Regional</span>
-        Selecione uma regional na lista abaixo para ver a evolução histórica.
+        <span class="info-title">Viagem no Tempo</span>
+        Quer saber se a situação no seu bairro melhorou ou piorou? Selecione a regional abaixo e veja a linha do tempo.
+        <br>Isso ajuda a entender se as ações de controle estão funcionando naquela área específica.
     </div>
     """, unsafe_allow_html=True)
 
@@ -463,13 +469,14 @@ elif st.session_state.segment == "Historico":
 
     st.markdown("""
     <div class="info-box">
-        <span class="info-title">Correlação Histórica</span>
-        Acompanhe a relação entre as populações ao longo das décadas.
+        <span class="info-title">Conexão entre as Espécies</span>
+        Este gráfico é o mais importante para entender a doença. Ele compara, ano a ano, a curva de cães doentes com a curva de pessoas doentes.
         <ul>
             <li><span style='color:#C2410C; font-weight:bold;'>● Linha Laranja:</span> <strong>Cães Positivos</strong>.</li>
             <li><span style='color:#5D3A9B; font-weight:bold;'>● Linha Roxa:</span> <strong>Casos Humanos</strong>.</li>
         </ul>
-        <i>Nota epidemiológica: Este gráfico permite observar tendências concomitantes (descritivo). Para inferência de causalidade (lag), seria necessária análise estatística avançada.</i>
+        <b>O que observar?</b> Muitas vezes, um aumento nos casos caninos precede um aumento nos casos humanos. Isso reforça que <i>cuidar dos animais é cuidar das pessoas</i>.
+        <br><i>Nota Técnica: Correlação descritiva para fins de vigilância em saúde pública.</i>
     </div>
     """, unsafe_allow_html=True)
     
@@ -493,7 +500,7 @@ elif st.session_state.segment == "Historico":
     )
 
     fig.update_layout(
-        title="<b>Correlação Descritiva: Humano vs Canino</b>",
+        title="<b>Comparativo Histórico: Casos Humanos e Caninos</b>",
         font_family="Source Sans Pro", plot_bgcolor='white', hovermode="x unified",
         font=dict(size=plotly_font),
         legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")

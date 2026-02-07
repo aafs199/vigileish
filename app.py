@@ -14,9 +14,8 @@ logging.basicConfig(level=logging.ERROR)
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="VigiLeish Dashboard", layout="wide", page_icon=None)
 
-# --- 2. LOGO E SIDEBAR (LIMPA E SEM ÍCONES) ---
+# --- 2. LOGO E SIDEBAR (LIMPA, SEM ÍCONES) ---
 with st.sidebar:
-    # Apenas a imagem do logo
     st.image("dog.png", width=120) 
     
     st.markdown("### Preferências")
@@ -63,7 +62,7 @@ st.markdown(f"""
     
     [data-testid="stSidebar"] {{ background-color: #f7fcf9 !important; border-right: 1px solid #d1d5db; }}
     
-    /* Estilização dos Botões de Navegação - Sem Ícones, Sóbrio */
+    /* Botões de Navegação Sóbrios */
     div.stButton > button {{
         width: 100%;
         border-radius: 6px;
@@ -72,13 +71,13 @@ st.markdown(f"""
         transition: all 0.3s;
     }}
     
-    /* Botão Secundário (Inativo) */
+    /* Botão Inativo */
     div.stButton > button[kind="secondary"] {{
         background-color: #ffffff;
         color: #064E3B;
     }}
     
-    /* Botão Primário (Ativo) */
+    /* Botão Ativo */
     div.stButton > button[kind="primary"] {{
         background-color: #064E3B !important;
         color: #ffffff !important;
@@ -117,17 +116,24 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. CARREGAMENTO DE DADOS (CORRIGIDO PARA RESTAURAR 1994-2007) ---
+# --- 4. CARREGAMENTO DE DADOS (CORRIGIDO PARA INTEIROS E HISTÓRICO COMPLETO) ---
 @st.cache_data
 def load_data():
     try:
         # A. HUMANOS
-        # Aumentei nrows para 50 para garantir que pegue todas as linhas históricas (1994 em diante)
-        df_h_raw = pd.read_csv('dados_novos.csv', skiprows=1, nrows=50, encoding='iso-8859-1', sep=None, engine='python')
+        # nrows=60 garante leitura de todo o histórico (1994-2025 e além)
+        df_h_raw = pd.read_csv('dados_novos.csv', skiprows=1, nrows=60, encoding='iso-8859-1', sep=None, engine='python')
         df_h_raw = df_h_raw.iloc[:, :7]
         df_h_raw.columns = ['Ano', 'Casos', 'Pop', 'Inc', 'Prev', 'Obitos', 'Letalidade']
+        
+        # Conversão forçada para numérico, transformando erros em NaN
         df_h_raw['Ano'] = pd.to_numeric(df_h_raw['Ano'], errors='coerce')
-        df_h_raw = df_h_raw.dropna(subset=['Ano']) # Remove linhas vazias, mas mantém anos antigos válidos
+        
+        # Remove linhas onde o Ano é inválido (NaN)
+        df_h_raw = df_h_raw.dropna(subset=['Ano'])
+        
+        # CORREÇÃO DO 2025.0: Converte para Inteiro após limpar NaNs
+        df_h_raw['Ano'] = df_h_raw['Ano'].astype(int)
         
         # CÁLCULO ESTATÍSTICO (Média + 2DP)
         media_let = df_h_raw['Letalidade'].mean()
@@ -135,7 +141,7 @@ def load_data():
         limiar_letalidade = media_let + (2 * dp_let)
 
         # B. REGIONAIS
-        # Lógica restaurada para o método "posicional" (2006 + i) que funcionava para o arquivo da prefeitura
+        # Lógica original restaurada para garantir leitura correta
         df_reg_raw = pd.read_csv('dados_novos.csv', skiprows=39, nrows=11, encoding='iso-8859-1', sep=None, engine='python')
         coords = {
             'Barreiro': [-19.974, -44.022], 'Centro Sul': [-19.933, -43.935], 'Leste': [-19.921, -43.902],
@@ -147,7 +153,7 @@ def load_data():
         for index, row in df_reg_raw.iterrows():
             reg_nome = str(row.iloc[0]).strip()
             if reg_nome in coords:
-                # Restaura a lógica original: col 1 = 2007, col 2 = 2008...
+                # Lógica posicional: Coluna 1 = 2007 (2006+1), etc.
                 for i in range(1, len(row)): 
                     try:
                         ano = 2006 + i 
@@ -170,9 +176,11 @@ def load_data():
             df_c_raw[col] = df_c_raw[col].str.strip().str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
             df_c_raw[col] = pd.to_numeric(df_c_raw[col], errors='coerce').fillna(0)
         
+        # Converte ano canino para int também
+        df_c_raw['Ano'] = df_c_raw['Ano'].astype(int)
+        
         df_c_clean = df_c_raw.copy()
         
-        # Divisão segura
         df_c_clean['Taxa_Positividade'] = np.where(
             df_c_clean['Sorologias'] > 0,
             (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100),
@@ -186,12 +194,13 @@ def load_data():
         for col in df_v_raw.columns:
             df_v_raw[col] = df_v_raw[col].str.strip().str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
             df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0)
+        
+        # Converte ano vetor para int
+        df_v_raw['Ano'] = df_v_raw['Ano'].astype(int)
         df_v_clean = df_v_raw.copy()
 
-        # RANGES GLOBAIS
-        # Garante que o mínimo seja 1994 ou o menor ano encontrado nos dados humanos
-        min_ano_encontrado = int(df_h_raw['Ano'].min())
-        min_ano_global = min(1994, min_ano_encontrado) # Força visualização a partir de 1994 se disponível
+        # Ranges
+        min_ano_global = int(df_h_raw['Ano'].min())
         max_ano_global = int(df_h_raw['Ano'].max())
 
         return df_h_raw, df_mapa, df_c_clean, df_v_clean, limiar_letalidade, min_ano_global, max_ano_global
@@ -212,7 +221,7 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------
-# BARRA DE NAVEGAÇÃO SUPERIOR (BOTÕES REAIS + ANO)
+# BARRA DE NAVEGAÇÃO E FILTROS
 # ---------------------------------------------------------------------
 if 'segment' not in st.session_state:
     st.session_state.segment = "Geral"
@@ -220,7 +229,7 @@ if 'segment' not in st.session_state:
 def get_btn_type(btn_name):
     return "primary" if st.session_state.segment == btn_name else "secondary"
 
-# Layout ajustado
+# Layout: Botões de navegação + Filtro de Ano na mesma linha
 c1, c2, c3, c4, c_ano = st.columns([1, 1, 1, 1, 1.5])
 
 with c1:
@@ -243,12 +252,13 @@ with c4:
 with c_ano:
     if not df_h.empty:
         anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
+        # O selectbox agora mostra anos inteiros limpos
         ano_sel = st.selectbox("Selecione o Ano:", options=anos, index=0, label_visibility="collapsed")
     else:
         ano_sel = 2025
 
 # -----------------------------------------------------
-# FIX DE SCROLL GLOBAL
+# FIX DE SCROLL
 # -----------------------------------------------------
 components.html(
     f"""

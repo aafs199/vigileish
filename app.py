@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.ERROR)
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="VigiLeish Dashboard", layout="wide", page_icon=None)
 
-# --- 2. LOGO E SIDEBAR (LIMPA) ---
+# --- 2. LOGO E SIDEBAR ---
 with st.sidebar:
     st.image("dog.png", width=120) 
     
@@ -120,13 +120,10 @@ def load_data():
         df_h_raw = pd.read_csv('dados_novos.csv', skiprows=1, nrows=60, encoding='iso-8859-1', sep=None, engine='python')
         df_h_raw = df_h_raw.iloc[:, :7]
         df_h_raw.columns = ['Ano', 'Casos', 'Pop', 'Inc', 'Prev', 'Obitos', 'Letalidade']
-        
-        # Conversão numérica e limpeza
         df_h_raw['Ano'] = pd.to_numeric(df_h_raw['Ano'], errors='coerce')
         df_h_raw = df_h_raw.dropna(subset=['Ano'])
-        df_h_raw['Ano'] = df_h_raw['Ano'].astype(int) # Garante inteiros (sem .0)
+        df_h_raw['Ano'] = df_h_raw['Ano'].astype(int)
         
-        # CÁLCULO ESTATÍSTICO
         media_let = df_h_raw['Letalidade'].mean()
         dp_let = df_h_raw['Letalidade'].std()
         limiar_letalidade = media_let + (2 * dp_let)
@@ -143,14 +140,12 @@ def load_data():
         for index, row in df_reg_raw.iterrows():
             reg_nome = str(row.iloc[0]).strip()
             if reg_nome in coords:
-                # Lógica: Coluna 1 = 2007 (2006+1)
                 for i in range(1, len(row)): 
                     try:
                         ano = 2006 + i 
                         val = row.iloc[i]
                         val_num = pd.to_numeric(val, errors='coerce')
                         if pd.isna(val_num): val_num = 0
-                        
                         regionais_lista.append({
                             'Regional': reg_nome, 'Ano': int(ano),
                             'Casos': val_num,
@@ -166,13 +161,11 @@ def load_data():
             df_c_raw[col] = df_c_raw[col].str.strip().str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
             df_c_raw[col] = pd.to_numeric(df_c_raw[col], errors='coerce').fillna(0)
         
-        df_c_raw['Ano'] = df_c_raw['Ano'].astype(int) # Inteiros
+        df_c_raw['Ano'] = df_c_raw['Ano'].astype(int)
         df_c_clean = df_c_raw.copy()
-        
         df_c_clean['Taxa_Positividade'] = np.where(
             df_c_clean['Sorologias'] > 0,
-            (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100),
-            0
+            (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100), 0
         )
 
         # D. VETOR
@@ -183,12 +176,11 @@ def load_data():
             df_v_raw[col] = df_v_raw[col].str.strip().str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
             df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0)
         
-        df_v_raw['Ano'] = df_v_raw['Ano'].astype(int) # Inteiros
+        df_v_raw['Ano'] = df_v_raw['Ano'].astype(int)
         df_v_clean = df_v_raw.copy()
 
-        # Ranges
         min_ano_encontrado = int(df_h_raw['Ano'].min())
-        min_ano_global = min(1994, min_ano_encontrado) # Garante 1994
+        min_ano_global = min(1994, min_ano_encontrado)
         max_ano_global = int(df_h_raw['Ano'].max())
 
         return df_h_raw, df_mapa, df_c_clean, df_v_clean, limiar_letalidade, min_ano_global, max_ano_global
@@ -209,14 +201,25 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------
-# BARRA DE NAVEGAÇÃO
+# BARRA DE NAVEGAÇÃO E FILTROS COM PERSISTÊNCIA DE DADOS
 # ---------------------------------------------------------------------
+
+# 1. Inicializa o estado de navegação
 if 'segment' not in st.session_state:
     st.session_state.segment = "Geral"
+
+# 2. Inicializa o estado do ANO SELECIONADO (Global)
+# Se não houver ano salvo, define como o ano mais recente disponível
+if 'ano_global' not in st.session_state:
+    if not df_h.empty:
+        st.session_state.ano_global = int(df_h['Ano'].max())
+    else:
+        st.session_state.ano_global = 2025
 
 def get_btn_type(btn_name):
     return "primary" if st.session_state.segment == btn_name else "secondary"
 
+# Layout: Botões + Filtro de Ano
 c1, c2, c3, c4, c_ano = st.columns([1, 1, 1, 1, 1.5])
 
 with c1:
@@ -239,10 +242,20 @@ with c4:
 with c_ano:
     if not df_h.empty:
         anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
-        # label_visibility="collapsed" remove o label para alinhar melhor visualmente
-        ano_sel = st.selectbox("Selecione o Ano:", options=anos, index=0, label_visibility="collapsed")
+        # O SEGMENTO DE OURO: key="ano_global"
+        # Isso liga o selectbox diretamente à memória do Streamlit.
+        # Quando você muda de aba, o Streamlit lembra o valor de "ano_global".
+        st.selectbox(
+            "Selecione o Ano:",
+            options=anos,
+            key="ano_global", 
+            label_visibility="collapsed"
+        )
     else:
-        ano_sel = 2025
+        st.session_state.ano_global = 2025 # Fallback
+
+# Variável auxiliar para facilitar o uso no código abaixo
+ano_sel = st.session_state.ano_global
 
 # -----------------------------------------------------
 # FIX DE SCROLL
@@ -288,28 +301,35 @@ if st.session_state.segment == "Geral":
 
     col1, col2, col3 = st.columns(3)
     if not dh.empty:
-        col1.metric("Casos Humanos", f"{int(dh['Casos'].iloc[0])}")
-        col2.metric("Óbitos", f"{int(dh['Obitos'].iloc[0])}")
+        # Verifica se há dados para o ano, senão mostra 0
+        casos = int(dh['Casos'].iloc[0]) if not dh['Casos'].empty else 0
+        obitos = int(dh['Obitos'].iloc[0]) if not dh['Obitos'].empty else 0
         
-        letalidade = dh['Letalidade'].iloc[0]
-        if letalidade >= limiar_stat:
-            cor_borda = "#C2410C" 
-            icone = "ALTA"
-            cor_texto = "#C2410C"
-        else:
-            cor_borda = "#1e293b"
-            icone = "Estável"
-            cor_texto = "#1e293b"
+        col1.metric("Casos Humanos", f"{casos}")
+        col2.metric("Óbitos", f"{obitos}")
+        
+        if not dh['Letalidade'].empty:
+            letalidade = dh['Letalidade'].iloc[0]
+            if letalidade >= limiar_stat:
+                cor_borda = "#C2410C" 
+                icone = "ALTA"
+                cor_texto = "#C2410C"
+            else:
+                cor_borda = "#1e293b"
+                icone = "Estável"
+                cor_texto = "#1e293b"
 
-        col3.markdown(f"""
-            <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; border-left: 6px solid {cor_borda};">
-                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 5px; font-family: 'Lora', serif;">Letalidade</p>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <p style="color: {cor_texto}; font-size: 1.8rem; font-weight: 700; margin: 0; font-family: 'Lora', serif;">{letalidade:.1f}%</p>
-                    <span style="font-size: 0.9rem; font-weight: bold; color: {cor_texto}; background: #fff3e0; padding: 2px 6px; border-radius: 4px;">{icone}</span>
+            col3.markdown(f"""
+                <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; border-left: 6px solid {cor_borda};">
+                    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 5px; font-family: 'Lora', serif;">Letalidade</p>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <p style="color: {cor_texto}; font-size: 1.8rem; font-weight: 700; margin: 0; font-family: 'Lora', serif;">{letalidade:.1f}%</p>
+                        <span style="font-size: 0.9rem; font-weight: bold; color: {cor_texto}; background: #fff3e0; padding: 2px 6px; border-radius: 4px;">{icone}</span>
+                    </div>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+        else:
+            col3.metric("Letalidade", "0%")
     else:
         col1.metric("Casos Humanos", "0"); col2.metric("Óbitos", "0"); col3.metric("Letalidade", "0%")
 

@@ -41,27 +41,32 @@ with st.sidebar:
 
     st.markdown("---")
 
-# --- 3. ESTILO CSS DINÂMICO ---
+# --- 3. ESTILO CSS DINÂMICO (ATUALIZADO PARA SANS-SERIF) ---
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
+    /* Mudança para Source Sans Pro (Mais técnico e limpo para dados) */
+    @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap');
     
     html {{ font-size: {css_root} !important; }}
 
-    .main .block-container {{ color: #1e293b; font-family: 'Lora', serif; }}
-    h1, h2, h3, h4, h5, h6, p, div {{ font-family: 'Lora', serif !important; }}
+    .main .block-container {{ color: #1e293b; font-family: 'Source Sans Pro', sans-serif; }}
+    h1, h2, h3, h4, h5, h6, p, div {{ font-family: 'Source Sans Pro', sans-serif !important; }}
     .main h2, .main h3, .main h4 {{ color: #064E3B !important; font-weight: 700 !important; }}
+    
     [data-testid="stSidebar"] {{ background-color: #f7fcf9 !important; border-right: 1px solid #d1d5db; }}
+    
     div[data-baseweb="select"] > div {{ background-color: #ffffff !important; border-color: #5D3A9B !important; color: #1e293b !important; }}
     div.stButton > button, div.stLinkButton > a {{
         background-color: #ffffff !important; color: #064E3B !important; border: 1px solid #2E7D32 !important; 
         border-radius: 6px !important; font-weight: 600 !important;
     }}
+    
     [data-testid="stMetric"] {{
         background-color: #ffffff; padding: 15px; border-radius: 8px;
         border: 1px solid #e2e8f0; border-left: 5px solid #5D3A9B;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }}
+    
     .info-box {{
         background-color: #f0fdf4; border-left: 5px solid #117733; padding: 15px;
         border-radius: 5px; margin-bottom: 20px; color: #1e293b; font-size: 0.95rem;
@@ -75,7 +80,9 @@ st.markdown(f"""
     .info-box li {{
         margin-bottom: 10px !important;
     }}
+    
     .info-title {{ color: #117733; font-weight: bold; margin-bottom: 8px; display: block; font-size: 1.15rem; }}
+
     .header-container {{
         background-color: #064E3B; padding: 40px 20px; border-radius: 8px; margin-bottom: 30px;
         text-align: center; border-bottom: 4px solid #C2410C;
@@ -87,7 +94,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. CARREGAMENTO DE DADOS ---
+# --- 4. CARREGAMENTO DE DADOS (COM CORREÇÕES DE SEGURANÇA) ---
 @st.cache_data
 def load_data():
     try:
@@ -98,8 +105,7 @@ def load_data():
         df_h_raw['Ano'] = pd.to_numeric(df_h_raw['Ano'], errors='coerce')
         df_h_raw = df_h_raw.dropna(subset=['Ano'])
         
-        # --- CÁLCULO DO LIMIAR ESTATÍSTICO (Média + 2 Desvios Padrão) ---
-        # Isso define um "Limite de Controle Superior" baseado na variabilidade histórica dos dados
+        # CÁLCULO ESTATÍSTICO (Média + 2DP) - Mantido pois é robusto para graduação
         media_let = df_h_raw['Letalidade'].mean()
         dp_let = df_h_raw['Letalidade'].std()
         limiar_letalidade = media_let + (2 * dp_let)
@@ -113,6 +119,7 @@ def load_data():
         }
         regionais_lista = []
         
+        # Identificação dinâmica de colunas de ano
         cols = df_reg_raw.columns
         anos_cols = []
         for c in cols:
@@ -130,9 +137,13 @@ def load_data():
                     try:
                         ano = int(col_ano)
                         val = row[col_ano]
+                        # CORREÇÃO DE SEGURANÇA: Parsing explícito + fillna
+                        val_num = pd.to_numeric(val, errors='coerce')
+                        if pd.isna(val_num): val_num = 0
+                        
                         regionais_lista.append({
                             'Regional': reg_nome, 'Ano': ano,
-                            'Casos': pd.to_numeric(val, errors='coerce') or 0,
+                            'Casos': val_num,
                             'Lat': coords[reg_nome][0], 'Lon': coords[reg_nome][1]
                         })
                     except: continue
@@ -147,6 +158,7 @@ def load_data():
         
         df_c_clean = df_c_raw.copy()
         
+        # Divisão segura com numpy
         df_c_clean['Taxa_Positividade'] = np.where(
             df_c_clean['Sorologias'] > 0,
             (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100),
@@ -229,7 +241,7 @@ if st.session_state.segment == "Geral":
         <ul>
             <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com leishmaniose no ano selecionado.</li>
             <li><strong>Óbitos:</strong> Número de pessoas que faleceram em decorrência da doença.</li>
-            <li><strong>Letalidade (%):</strong> Indica a gravidade. <br><i><b>Critério de Alerta:</b> O limite de alerta ({limiar_stat:.1f}%) é calculado dinamicamente com base na Média Histórica + 2 Desvios Padrão, identificando desvios estatisticamente significativos.</i></li>
+            <li><strong>Letalidade (%):</strong> Indica a gravidade. <br><i><b>Nota Técnica:</b> O alerta (laranja) é acionado estatisticamente quando a letalidade supera o limite histórico de {limiar_stat:.1f}% (Média + 2 Desvios Padrão).</i></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -240,7 +252,7 @@ if st.session_state.segment == "Geral":
         col2.metric("Óbitos", f"{int(dh['Obitos'].iloc[0])}")
         
         letalidade = dh['Letalidade'].iloc[0]
-        # CORREÇÃO: Limiar Estatístico Seguro (Média + 2DP)
+        
         if letalidade >= limiar_stat:
             cor_borda = "#C2410C" 
             icone = "⚠️ ALTA"
@@ -252,9 +264,9 @@ if st.session_state.segment == "Geral":
 
         col3.markdown(f"""
             <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; border-left: 6px solid {cor_borda};">
-                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 5px; font-family: 'Lora', serif;">Letalidade</p>
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 5px; font-family: 'Source Sans Pro', sans-serif;">Letalidade</p>
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <p style="color: {cor_texto}; font-size: 1.8rem; font-weight: 700; margin: 0; font-family: 'Lora', serif;">{letalidade:.1f}%</p>
+                    <p style="color: {cor_texto}; font-size: 1.8rem; font-weight: 700; margin: 0; font-family: 'Source Sans Pro', sans-serif;">{letalidade:.1f}%</p>
                     <span style="font-size: 0.9rem; font-weight: bold; color: {cor_texto}; background: #fff3e0; padding: 2px 6px; border-radius: 4px;">{icone}</span>
                 </div>
             </div>
@@ -270,7 +282,7 @@ if st.session_state.segment == "Geral":
     <div class="info-box">
         <ul>
             <li><strong>Cães Positivos:</strong> Quantidade de animais que fizeram o exame e tiveram a doença confirmada.</li>
-            <li><strong>Eutanásias:</strong> Medida de saúde pública prevista em diretrizes para controle de reservatório.</li>
+            <li><strong>Eutanásias:</strong> Medida de saúde pública para controle de reservatório (conforme diretrizes do MS).</li>
             <li><strong>Taxa de Positividade (%):</strong> Proporção de cães doentes entre todos os que foram testados.</li>
         </ul>
     </div>
@@ -292,7 +304,7 @@ if st.session_state.segment == "Geral":
     <div class="info-box">
         <ul>
             <li><strong>Total Sorologias (Testes):</strong> Esforço da vigilância em testar a população canina.</li>
-            <li><strong>Imóveis Borrifados:</strong> Aplicação de inseticida (controle químico). Ações reativas a casos ou vetores.</li>
+            <li><strong>Imóveis Borrifados:</strong> Aplicação de inseticida (controle químico). Ações geralmente reativas à detecção de casos ou vetores.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -327,11 +339,12 @@ elif st.session_state.segment == "Canina":
     fig_bar.add_trace(go.Bar(x=df_c['Ano'], y=df_c['Positivos'], name="Cães Positivos", marker_color='#C2410C'))
     fig_bar.add_trace(go.Bar(x=df_c['Ano'], y=df_c['Eutanasiados'], name="Eutanásias", marker_color='#5D3A9B'))
     
-    fig_bar.update_layout(height=400, plot_bgcolor='white', font_family="Lora", barmode='group',
+    fig_bar.update_layout(height=400, plot_bgcolor='white', font_family="Source Sans Pro", barmode='group',
                           font=dict(size=plotly_font),
                           title="Casos Positivos e Eutanásias em Cães",
                           legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center"))
     
+    # CORREÇÃO: Margem de segurança de 0.5 para não cortar barras
     fig_bar.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9', title_text="Qtd. Animais")
     fig_bar.update_xaxes(dtick=1, range=[min_ano-0.5, max_ano+0.5], title_text="Ano")
     st.plotly_chart(fig_bar, use_container_width=True)
@@ -351,7 +364,7 @@ elif st.session_state.segment == "Canina":
     fig_line = go.Figure()
     fig_line.add_trace(go.Scatter(x=df_c['Ano'], y=df_c['Sorologias'], name="Total de Testes", mode='lines+markers', line=dict(color='#117733', width=3)))
     
-    fig_line.update_layout(height=400, plot_bgcolor='white', font_family="Lora",
+    fig_line.update_layout(height=400, plot_bgcolor='white', font_family="Source Sans Pro",
                            font=dict(size=plotly_font),
                            title="Total de Sorologias (Testes) Realizados",
                            legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"))
@@ -368,11 +381,12 @@ elif st.session_state.segment == "Canina":
     st.markdown("""
     <div class="info-box">
         O gráfico abaixo mostra a evolução do <b>Controle Vetorial</b>.
+        <br><i>Análise Temporal: Picos de borrifação geralmente respondem a aumentos na detecção entomológica ou de casos.</i>
     </div>
     """, unsafe_allow_html=True)
 
     fig_v = px.line(df_v, x='Ano', y='Borrifados', markers=True, color_discrete_sequence=['#374151'])
-    fig_v.update_layout(plot_bgcolor='white', font_family="Lora", yaxis_title="Qtd. Imóveis",
+    fig_v.update_layout(plot_bgcolor='white', font_family="Source Sans Pro", yaxis_title="Qtd. Imóveis",
                         font=dict(size=plotly_font),
                         legend=dict(orientation="h", y=1.1, x=0.5))
     fig_v.update_yaxes(tickformat=".,d") 
@@ -403,6 +417,7 @@ elif st.session_state.segment == "Mapa":
                 Regiões com <b>maior concentração de casos</b>.
             </li>
         </ul>
+        <i>* Nota: Visualização de dados absolutos. A densidade de casos deve ser interpretada considerando a população de cada regional.</i>
     </div>
     """, unsafe_allow_html=True)
     
@@ -438,7 +453,7 @@ elif st.session_state.segment == "Mapa":
         fig_hist_reg = px.line(df_reg_hist, x='Ano', y='Casos', markers=True,
                                title=f"Evolução dos Casos Humanos: {reg_sel}",
                                color_discrete_sequence=['#117733']) 
-        fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Lora", font=dict(size=plotly_font))
+        fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Source Sans Pro", font=dict(size=plotly_font))
         
         fig_hist_reg.update_xaxes(dtick=1, range=[min_ano, max_ano]) 
         st.plotly_chart(fig_hist_reg, use_container_width=True)
@@ -454,7 +469,7 @@ elif st.session_state.segment == "Historico":
             <li><span style='color:#C2410C; font-weight:bold;'>● Linha Laranja:</span> <strong>Cães Positivos</strong>.</li>
             <li><span style='color:#5D3A9B; font-weight:bold;'>● Linha Roxa:</span> <strong>Casos Humanos</strong>.</li>
         </ul>
-        <i>Nota epidemiológica: Este gráfico permite observar tendências concomitantes (descritivo), sem inferir causalidade imediata (lag) sem análise estatística avançada.</i>
+        <i>Nota epidemiológica: Este gráfico permite observar tendências concomitantes (descritivo). Para inferência de causalidade (lag), seria necessária análise estatística avançada.</i>
     </div>
     """, unsafe_allow_html=True)
     
@@ -479,7 +494,7 @@ elif st.session_state.segment == "Historico":
 
     fig.update_layout(
         title="<b>Correlação Descritiva: Humano vs Canino</b>",
-        font_family="Lora", plot_bgcolor='white', hovermode="x unified",
+        font_family="Source Sans Pro", plot_bgcolor='white', hovermode="x unified",
         font=dict(size=plotly_font),
         legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
     )

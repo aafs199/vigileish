@@ -14,14 +14,20 @@ logging.basicConfig(level=logging.ERROR)
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="dog.png")
 
-# --- 2. LOGO E MENU LATERAL ---
+# --- 2. LOGO E CONFIGURAÇÕES LATERAIS (AGORA APENAS FILTROS) ---
 with st.sidebar:
     st.markdown('<div class="sidebar-logo">', unsafe_allow_html=True)
     st.image("dog.png", width=120) 
     st.markdown('</div>', unsafe_allow_html=True)
 
+    st.markdown("### ⚙️ Configurações")
+    
+    # MOVI O SELETOR DE ANO PARA O TOPO DA SIDEBAR PARA FICAR MAIS ACESSÍVEL
+    # O carregamento de dados acontece depois, mas precisamos definir a variável aqui ou usar um placeholder.
+    # Para simplificar, vamos manter a lógica de carregar dados primeiro, mas a interface visual vem aqui.
+    
     # --- CONTROLE DE ACESSIBILIDADE ---
-    st.markdown("### 👁️ Acessibilidade")
+    st.markdown("#### 👁️ Acessibilidade")
     tamanho_fonte = st.radio(
         "Tamanho do Texto:",
         ["Padrão", "Grande", "Extra Grande"],
@@ -40,11 +46,20 @@ with st.sidebar:
         plotly_font = 14
 
     st.markdown("---")
+    
+    # O restante da sidebar (Link e Créditos) fica no final
+    st.link_button("Informações Oficiais (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
+    st.markdown("---")
+    st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
+    st.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
+    st.caption(f"Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
+    st.caption(f"O painel apresenta análise descritiva dos dados oficiais, sem inferência causal, utilizando estatística básica e visualização interativa para apoio à vigilância epidemiológica.")
+    st.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")
 
 # --- 3. ESTILO CSS DINÂMICO ---
 st.markdown(f"""
     <style>
-    /* Mantendo a fonte Lora conforme seu pedido original (melhor para leitura de leigos) */
+    /* Mantendo a fonte Lora conforme seu pedido original */
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
     
     html {{ font-size: {css_root} !important; }}
@@ -91,6 +106,23 @@ st.markdown(f"""
     .header-title {{ color: #ffffff !important; font-size: 2.2rem !important; margin: 0 !important; font-weight: 700 !important; }}
     .header-subtitle {{ color: #dcfce7 !important; margin-top: 10px !important; font-size: 1.0rem; font-style: italic; }}
     .sidebar-logo {{ display: flex; justify-content: center; margin-bottom: 20px; }}
+    
+    /* ESTILO NOVO PARA O MENU DE ABAS SUPERIOR (Mobile Friendly) */
+    div[data-testid="stRadio"] > label {{ display: none; }} /* Esconde o label do radio */
+    div[role="radiogroup"] {{
+        background-color: #ffffff;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        justify-content: center;
+    }}
+    /* Ajuste para telas pequenas */
+    @media (max-width: 640px) {{
+        div[role="radiogroup"] {{
+            flex-direction: column; /* Empilha botões no celular se precisar */
+            gap: 10px;
+        }}
+    }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -156,7 +188,7 @@ def load_data():
         
         df_c_clean = df_c_raw.copy()
         
-        # Divisão segura com numpy
+        # Divisão segura
         df_c_clean['Taxa_Positividade'] = np.where(
             df_c_clean['Sorologias'] > 0,
             (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100),
@@ -172,7 +204,7 @@ def load_data():
             df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0)
         df_v_clean = df_v_raw.copy()
 
-        # Ranges globais para gráficos
+        # Ranges
         min_ano_global = int(df_h_raw['Ano'].min())
         max_ano_global = int(df_h_raw['Ano'].max())
 
@@ -185,31 +217,15 @@ def load_data():
 
 df_h, df_m, df_c, df_v, limiar_stat, min_ano, max_ano = load_data()
 
-# --- 5. MENU LATERAL ---
-if 'segment' not in st.session_state: st.session_state.segment = "Geral"
-
-with st.sidebar:
-    st.markdown("### Menu de Navegação")
-    
-    if not df_h.empty:
+# --- 5. FILTRO DE ANO (MANTIDO NA SIDEBAR) ---
+# Inserimos aqui o filtro de ano que estava misturado antes
+if not df_h.empty:
+    with st.sidebar:
+        st.markdown("#### 📅 Período")
         anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
         ano_sel = st.selectbox("Selecione o ano:", options=anos, index=0)
-    else:
-        ano_sel = 2025
-
-    if st.button("Painel Geral", use_container_width=True): st.session_state.segment = "Geral"
-    if st.button("Mapa Regional", use_container_width=True): st.session_state.segment = "Mapa"
-    if st.button("Vigilância Canina", use_container_width=True): st.session_state.segment = "Canina"
-    if st.button("Tendências Históricas", use_container_width=True): st.session_state.segment = "Historico"
-
-    st.link_button("Informações (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
-
-    st.markdown("---")
-    st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
-    st.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
-    st.caption(f"Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
-    st.caption(f"O painel apresenta análise descritiva dos dados oficiais, sem inferência causal, utilizando estatística básica e visualização interativa para apoio à vigilância epidemiológica.")
-    st.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")
+else:
+    ano_sel = 2025
 
 # --- 6. CABEÇALHO ---
 st.markdown(f"""
@@ -219,27 +235,42 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# ----------------------------------------------------------------------
-# FIX DE SCROLL GLOBAL e "FORÇADO"
-# O parametro 'key' garante que o script seja re-executado quando a aba muda
-# ----------------------------------------------------------------------
+# -----------------------------------------------------
+# NOVO MENU DE NAVEGAÇÃO HORIZONTAL (SOLUÇÃO MOBILE)
+# -----------------------------------------------------
+# Isso substitui os botões da sidebar. Fica no topo da página principal.
+# É impossível não ver no celular.
+
+opcoes_menu = ["Painel Geral", "Mapa Regional", "Vigilância Canina", "Tendências Históricas"]
+
+# Usamos um radio button horizontal para simular abas
+navegacao = st.radio(
+    "", 
+    opcoes_menu, 
+    horizontal=True,
+    label_visibility="collapsed" # Esconde o título do radio
+)
+
+# -----------------------------------------------------
+# FIX DE SCROLL GLOBAL
+# Atrelado à variável 'navegacao' para resetar scroll ao trocar de aba
+# -----------------------------------------------------
 components.html(
     f"""
         <script>
             window.parent.scrollTo(0, 0);
             var main = window.parent.document.querySelector(".main");
-            var container = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
             if (main) {{ main.scrollTop = 0; }}
-            if (container) {{ container.scrollTop = 0; }}
         </script>
     """,
     height=0,
     width=0,
-    key=f"scroll_fix_{st.session_state.segment}" # Truque: Muda a key quando muda a aba
+    key=f"scroll_fix_{navegacao}" 
 )
 
-# --- 7. CONTEÚDO ---
-if st.session_state.segment == "Geral":
+# --- 7. CONTEÚDO (LOGICA BASEADA NO NOVO MENU) ---
+
+if navegacao == "Painel Geral":
     st.subheader(f"Visão Consolidada | {ano_sel}")
 
     st.markdown("""
@@ -254,7 +285,6 @@ if st.session_state.segment == "Geral":
     
     # --- BLOCO 1: SAÚDE HUMANA ---
     st.markdown("##### 1. Indicadores Humanos")
-    # TEXTO ORIGINAL + NOTA TÉCNICA DISCRETA
     st.markdown(f"""
     <div class="info-box">
         <ul>
@@ -271,7 +301,6 @@ if st.session_state.segment == "Geral":
         col2.metric("Óbitos", f"{int(dh['Obitos'].iloc[0])}")
         
         letalidade = dh['Letalidade'].iloc[0]
-        # LÓGICA ROBUSTA
         if letalidade >= limiar_stat:
             cor_borda = "#C2410C" 
             icone = "⚠️ ALTA"
@@ -337,7 +366,7 @@ if st.session_state.segment == "Geral":
         col8.metric("Imóveis Borrifados", f"{int(dv['Borrifados'].iloc[0]):,}".replace(',', '.'))
     else: col8.metric("Imóveis Borrifados", "0")
 
-elif st.session_state.segment == "Canina":
+elif navegacao == "Vigilância Canina":
     st.subheader("Vigilância Canina e Controle Vetorial")
 
     # --- PARTE 1: BARRAS ---
@@ -363,7 +392,6 @@ elif st.session_state.segment == "Canina":
                           title="Casos Positivos e Eutanásias em Cães",
                           legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center"))
     
-    # Range dinâmico e seguro
     fig_bar.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9', title_text="Qtd. Animais")
     fig_bar.update_xaxes(dtick=1, range=[min_ano-0.5, max_ano+0.5], title_text="Ano")
     st.plotly_chart(fig_bar, use_container_width=True)
@@ -411,7 +439,7 @@ elif st.session_state.segment == "Canina":
     fig_v.update_xaxes(dtick=1, range=[min_ano, max_ano])
     st.plotly_chart(fig_v, use_container_width=True)
 
-elif st.session_state.segment == "Mapa":
+elif navegacao == "Mapa Regional":
     st.subheader(f"Distribuição Geográfica | {ano_sel}")
 
     st.markdown("""
@@ -467,11 +495,10 @@ elif st.session_state.segment == "Mapa":
                                color_discrete_sequence=['#117733']) 
         fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Lora", font=dict(size=plotly_font))
         
-        # Range dinâmico
         fig_hist_reg.update_xaxes(dtick=1, range=[min_ano, max_ano]) 
         st.plotly_chart(fig_hist_reg, use_container_width=True)
 
-elif st.session_state.segment == "Historico":
+elif navegacao == "Tendências Históricas":
     st.subheader("Análise de Tendência: Humanos vs Caninos")
 
     st.markdown("""

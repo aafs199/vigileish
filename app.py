@@ -45,11 +45,12 @@ with st.sidebar:
     st.link_button("Informações Oficiais (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
     st.markdown("---")
     st.caption(f"Atualização: {datetime.now().strftime('%d/%m/%Y')}")
+    st.caption("O painel apresenta análise descritiva dos dados oficiais públicos, sem inferência causal, utilizando estatística básica e visualização interativa para apoio à vigilância epidemiológica.")
     st.caption("Fonte: DIZO/SUPVISA/SMSA/PBH")
     st.caption("Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
     st.caption("Analista: Aline Alice Ferreira da Silva | RU: 5277514")
 
-# --- 3. ESTILO CSS DINÂMICO ---
+# --- 3. CSS DINÂMICO ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
@@ -150,7 +151,7 @@ def load_data():
                     except: continue
         df_mapa = pd.DataFrame(regionais_lista)
 
-        # C. CANINOS
+        # C. CÃES
         df_c_raw = pd.read_csv('caninos_novos.csv', sep=';', encoding='iso-8859-1', dtype=str)
         df_c_raw.columns = ['Ano', 'Sorologias', 'Positivos', 'Eutanasiados']
         for col in df_c_raw.columns:
@@ -224,7 +225,7 @@ with c2:
         st.session_state.segment = "Mapa"
         st.rerun()
 with c3:
-    if st.button("Canina", type=get_btn_type("Canina"), use_container_width=True):
+    if st.button("Cães", type=get_btn_type("Canina"), use_container_width=True):
         st.session_state.segment = "Canina"
         st.rerun()
 with c4:
@@ -236,13 +237,11 @@ with c_ano:
     if not df_h.empty:
         lista_anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
         
-        # Encontra o índice do ano que está salvo na memória
         try:
             indice_atual = lista_anos.index(st.session_state.ano_selecionado)
         except ValueError:
             indice_atual = 0 # Se der erro (ano não existe), pega o primeiro
-            
-        # O Selectbox atualiza DIRETAMENTE o 'ano_selecionado' no session_state através da key
+         
         sel = st.selectbox(
             "Selecione o Ano:", 
             options=lista_anos, 
@@ -251,7 +250,6 @@ with c_ano:
             label_visibility="collapsed"
         )
         
-        # Sincronização: Se o widget mudou, atualiza a variável principal
         if sel != st.session_state.ano_selecionado:
             st.session_state.ano_selecionado = sel
             st.rerun() # Recarrega para aplicar o filtro
@@ -259,7 +257,6 @@ with c_ano:
     else:
         st.session_state.ano_selecionado = 2025
 
-# Variável final para uso nos gráficos
 ano_sel = st.session_state.ano_selecionado
 
 # -----------------------------------------------------
@@ -569,3 +566,4 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+

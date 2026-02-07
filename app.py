@@ -219,17 +219,24 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# -----------------------------------------------------
-# FIX DE SCROLL GLOBAL: Força o navegador a ir para o topo
-# Executado sempre que a página recarrega (clique em botão)
-# -----------------------------------------------------
-components.html("""
-    <script>
-        var body = window.parent.document.querySelector(".main");
-        if (body) { body.scrollTop = 0; }
-        window.parent.scrollTo(0, 0);
-    </script>
-""", height=0, width=0)
+# ----------------------------------------------------------------------
+# FIX DE SCROLL GLOBAL e "FORÇADO"
+# O parametro 'key' garante que o script seja re-executado quando a aba muda
+# ----------------------------------------------------------------------
+components.html(
+    f"""
+        <script>
+            window.parent.scrollTo(0, 0);
+            var main = window.parent.document.querySelector(".main");
+            var container = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            if (main) {{ main.scrollTop = 0; }}
+            if (container) {{ container.scrollTop = 0; }}
+        </script>
+    """,
+    height=0,
+    width=0,
+    key=f"scroll_fix_{st.session_state.segment}" # Truque: Muda a key quando muda a aba
+)
 
 # --- 7. CONTEÚDO ---
 if st.session_state.segment == "Geral":

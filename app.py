@@ -87,7 +87,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. CARREGAMENTO DE DADOS (AGORA ROBUSTO) ---
+# --- 4. CARREGAMENTO DE DADOS ---
 @st.cache_data
 def load_data():
     try:
@@ -98,11 +98,13 @@ def load_data():
         df_h_raw['Ano'] = pd.to_numeric(df_h_raw['Ano'], errors='coerce')
         df_h_raw = df_h_raw.dropna(subset=['Ano'])
         
-        # CÁLCULO ESTATÍSTICO DO LIMIAR (Percentil 85)
-        # Define o alerta baseado no histórico real, não em um número mágico
-        limiar_letalidade = df_h_raw['Letalidade'].quantile(0.85)
+        # --- CÁLCULO DO LIMIAR ESTATÍSTICO (Média + 2 Desvios Padrão) ---
+        # Isso define um "Limite de Controle Superior" baseado na variabilidade histórica dos dados
+        media_let = df_h_raw['Letalidade'].mean()
+        dp_let = df_h_raw['Letalidade'].std()
+        limiar_letalidade = media_let + (2 * dp_let)
 
-        # B. REGIONAIS - CORREÇÃO DE HARDCODING DE ANO
+        # B. REGIONAIS
         df_reg_raw = pd.read_csv('dados_novos.csv', skiprows=39, nrows=11, encoding='iso-8859-1', sep=None, engine='python')
         coords = {
             'Barreiro': [-19.974, -44.022], 'Centro Sul': [-19.933, -43.935], 'Leste': [-19.921, -43.902],
@@ -111,14 +113,12 @@ def load_data():
         }
         regionais_lista = []
         
-        # Identificar colunas que são anos (evitando o "2006 + i")
         cols = df_reg_raw.columns
         anos_cols = []
         for c in cols:
             try:
-                # Tenta converter o nome da coluna para inteiro (ex: "2007", "2008")
                 ano_int = int(str(c).strip())
-                if 1990 <= ano_int <= 2050: # Validação extra
+                if 1990 <= ano_int <= 2050: 
                     anos_cols.append(c)
             except:
                 continue
@@ -147,7 +147,6 @@ def load_data():
         
         df_c_clean = df_c_raw.copy()
         
-        # Divisão segura com numpy (evita erro se Sorologias = 0)
         df_c_clean['Taxa_Positividade'] = np.where(
             df_c_clean['Sorologias'] > 0,
             (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100),
@@ -163,7 +162,7 @@ def load_data():
             df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0)
         df_v_clean = df_v_raw.copy()
 
-        # RANGES DINÂMICOS (Baseados nos dados reais)
+        # Ranges
         min_ano_global = int(df_h_raw['Ano'].min())
         max_ano_global = int(df_h_raw['Ano'].max())
 
@@ -198,7 +197,7 @@ with st.sidebar:
     st.markdown("---")
     st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
     st.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
-    st.caption(f"Projeto: Tecnologia Aplicada à Inclusão Digital - UNINTER")
+    st.caption(f"Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
     st.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")
 
 # --- 6. CABEÇALHO ---
@@ -230,7 +229,7 @@ if st.session_state.segment == "Geral":
         <ul>
             <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com leishmaniose no ano selecionado.</li>
             <li><strong>Óbitos:</strong> Número de pessoas que faleceram em decorrência da doença.</li>
-            <li><strong>Letalidade (%):</strong> Indica a gravidade. <br><i><b>Nota Técnica:</b> O alerta (laranja) é acionado estatisticamente quando a letalidade supera o percentil 85 histórico ({limiar_stat:.1f}%).</i></li>
+            <li><strong>Letalidade (%):</strong> Indica a gravidade. <br><i><b>Critério de Alerta:</b> O limite de alerta ({limiar_stat:.1f}%) é calculado dinamicamente com base na Média Histórica + 2 Desvios Padrão, identificando desvios estatisticamente significativos.</i></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -241,7 +240,7 @@ if st.session_state.segment == "Geral":
         col2.metric("Óbitos", f"{int(dh['Obitos'].iloc[0])}")
         
         letalidade = dh['Letalidade'].iloc[0]
-        # CORREÇÃO: Uso de limiar estatístico (percentil) em vez de número mágico
+        # CORREÇÃO: Limiar Estatístico Seguro (Média + 2DP)
         if letalidade >= limiar_stat:
             cor_borda = "#C2410C" 
             icone = "⚠️ ALTA"
@@ -271,7 +270,7 @@ if st.session_state.segment == "Geral":
     <div class="info-box">
         <ul>
             <li><strong>Cães Positivos:</strong> Quantidade de animais que fizeram o exame e tiveram a doença confirmada.</li>
-            <li><strong>Eutanásias:</strong> Medida de saúde pública para controle de reservatório. <i>(Nota: Esta é uma medida de controle prevista em diretrizes, não um indicador de sucesso clínico).</i></li>
+            <li><strong>Eutanásias:</strong> Medida de saúde pública prevista em diretrizes para controle de reservatório.</li>
             <li><strong>Taxa de Positividade (%):</strong> Proporção de cães doentes entre todos os que foram testados.</li>
         </ul>
     </div>
@@ -293,7 +292,7 @@ if st.session_state.segment == "Geral":
     <div class="info-box">
         <ul>
             <li><strong>Total Sorologias (Testes):</strong> Esforço da vigilância em testar a população canina.</li>
-            <li><strong>Imóveis Borrifados:</strong> Aplicação de inseticida (controle químico). <i>(Nota: Ações de borrifação são reativas, ocorrendo frequentemente após a detecção de casos).</i></li>
+            <li><strong>Imóveis Borrifados:</strong> Aplicação de inseticida (controle químico). Ações reativas a casos ou vetores.</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -333,7 +332,6 @@ elif st.session_state.segment == "Canina":
                           title="Casos Positivos e Eutanásias em Cães",
                           legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center"))
     
-    # CORREÇÃO: Range dinâmico e seguro
     fig_bar.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9', title_text="Qtd. Animais")
     fig_bar.update_xaxes(dtick=1, range=[min_ano-0.5, max_ano+0.5], title_text="Ano")
     st.plotly_chart(fig_bar, use_container_width=True)
@@ -370,7 +368,6 @@ elif st.session_state.segment == "Canina":
     st.markdown("""
     <div class="info-box">
         O gráfico abaixo mostra a evolução do <b>Controle Vetorial</b>.
-        <br><i>Análise Temporal: Picos de borrifação geralmente respondem a aumentos na detecção entomológica ou de casos.</i>
     </div>
     """, unsafe_allow_html=True)
 
@@ -383,7 +380,6 @@ elif st.session_state.segment == "Canina":
     st.plotly_chart(fig_v, use_container_width=True)
 
 elif st.session_state.segment == "Mapa":
-    # FIX DE SCROLL
     components.html("""
         <script>
             var body = window.parent.document.querySelector(".main");
@@ -407,7 +403,6 @@ elif st.session_state.segment == "Mapa":
                 Regiões com <b>maior concentração de casos</b>.
             </li>
         </ul>
-        <i>* Nota: Visualização baseada em dados absolutos por Regional Administrativa. Não reflete densidade por bairro.</i>
     </div>
     """, unsafe_allow_html=True)
     
@@ -445,7 +440,6 @@ elif st.session_state.segment == "Mapa":
                                color_discrete_sequence=['#117733']) 
         fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Lora", font=dict(size=plotly_font))
         
-        # CORREÇÃO: Range dinâmico
         fig_hist_reg.update_xaxes(dtick=1, range=[min_ano, max_ano]) 
         st.plotly_chart(fig_hist_reg, use_container_width=True)
 
@@ -490,7 +484,6 @@ elif st.session_state.segment == "Historico":
         legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
     )
     
-    # CORREÇÃO: Range dinâmico
     fig.update_xaxes(title_text="Ano", dtick=1, range=[min_ano, max_ano], showgrid=False)
     fig.update_yaxes(title_text="Cães Positivos", tickformat=".,d", secondary_y=False, showgrid=True, gridcolor='#f1f5f9')
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)

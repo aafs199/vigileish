@@ -14,17 +14,13 @@ logging.basicConfig(level=logging.ERROR)
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="dog.png")
 
-# --- 2. LOGO E CONFIGURAÇÕES LATERAIS (AGORA APENAS FILTROS) ---
+# --- 2. LOGO E SIDEBAR (AGORA MAIS LIMPA) ---
 with st.sidebar:
     st.markdown('<div class="sidebar-logo">', unsafe_allow_html=True)
     st.image("dog.png", width=120) 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("### ⚙️ Configurações")
-    
-    # MOVI O SELETOR DE ANO PARA O TOPO DA SIDEBAR PARA FICAR MAIS ACESSÍVEL
-    # O carregamento de dados acontece depois, mas precisamos definir a variável aqui ou usar um placeholder.
-    # Para simplificar, vamos manter a lógica de carregar dados primeiro, mas a interface visual vem aqui.
+    st.markdown("### ⚙️ Preferências")
     
     # --- CONTROLE DE ACESSIBILIDADE ---
     st.markdown("#### 👁️ Acessibilidade")
@@ -47,19 +43,18 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # O restante da sidebar (Link e Créditos) fica no final
+    # CRÉDITOS E LINKS (MANTIDOS NA SIDEBAR)
     st.link_button("Informações Oficiais (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
     st.markdown("---")
     st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
     st.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
     st.caption(f"Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
-    st.caption(f"O painel apresenta análise descritiva dos dados oficiais, sem inferência causal, utilizando estatística básica e visualização interativa para apoio à vigilância epidemiológica.")
     st.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")
 
 # --- 3. ESTILO CSS DINÂMICO ---
 st.markdown(f"""
     <style>
-    /* Mantendo a fonte Lora conforme seu pedido original */
+    /* Mantendo a fonte Lora conforme pedido */
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
     
     html {{ font-size: {css_root} !important; }}
@@ -70,6 +65,7 @@ st.markdown(f"""
     
     [data-testid="stSidebar"] {{ background-color: #f7fcf9 !important; border-right: 1px solid #d1d5db; }}
     
+    /* Estilo dos Selectboxes e Botões */
     div[data-baseweb="select"] > div {{ background-color: #ffffff !important; border-color: #5D3A9B !important; color: #1e293b !important; }}
     div.stButton > button, div.stLinkButton > a {{
         background-color: #ffffff !important; color: #064E3B !important; border: 1px solid #2E7D32 !important; 
@@ -107,8 +103,8 @@ st.markdown(f"""
     .header-subtitle {{ color: #dcfce7 !important; margin-top: 10px !important; font-size: 1.0rem; font-style: italic; }}
     .sidebar-logo {{ display: flex; justify-content: center; margin-bottom: 20px; }}
     
-    /* ESTILO NOVO PARA O MENU DE ABAS SUPERIOR (Mobile Friendly) */
-    div[data-testid="stRadio"] > label {{ display: none; }} /* Esconde o label do radio */
+    /* MENU SUPERIOR PERSONALIZADO */
+    div[data-testid="stRadio"] > label {{ display: none; }} 
     div[role="radiogroup"] {{
         background-color: #ffffff;
         padding: 10px;
@@ -116,10 +112,10 @@ st.markdown(f"""
         border: 1px solid #e2e8f0;
         justify-content: center;
     }}
-    /* Ajuste para telas pequenas */
+    /* Ajuste Mobile para o Menu */
     @media (max-width: 640px) {{
         div[role="radiogroup"] {{
-            flex-direction: column; /* Empilha botões no celular se precisar */
+            flex-direction: column;
             gap: 10px;
         }}
     }}
@@ -212,20 +208,10 @@ def load_data():
 
     except Exception as e:
         logging.error(f"ERRO CRÍTICO: {e}")
-        st.warning("⚠️ Instabilidade nos dados. Verifique os arquivos de origem.")
+        st.warning("⚠️ Instabilidade nos dados.")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), 10, 2000, 2025
 
 df_h, df_m, df_c, df_v, limiar_stat, min_ano, max_ano = load_data()
-
-# --- 5. FILTRO DE ANO (MANTIDO NA SIDEBAR) ---
-# Inserimos aqui o filtro de ano que estava misturado antes
-if not df_h.empty:
-    with st.sidebar:
-        st.markdown("#### 📅 Período")
-        anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
-        ano_sel = st.selectbox("Selecione o ano:", options=anos, index=0)
-else:
-    ano_sel = 2025
 
 # --- 6. CABEÇALHO ---
 st.markdown(f"""
@@ -235,50 +221,46 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# -----------------------------------------------------
-# NOVO MENU DE NAVEGAÇÃO HORIZONTAL (SOLUÇÃO MOBILE)
-# -----------------------------------------------------
-# Isso substitui os botões da sidebar. Fica no topo da página principal.
-# É impossível não ver no celular.
+# ---------------------------------------------------------------------
+# BARRA DE NAVEGAÇÃO E CONTROLE UNIFICADA
+# Colocamos o Menu (Esq) e o Seletor de Ano (Dir) juntos no topo.
+# ---------------------------------------------------------------------
+c_nav, c_ano = st.columns([3, 1]) # Proporção: Navegação ocupa mais espaço
 
-opcoes_menu = ["Painel Geral", "Mapa Regional", "Vigilância Canina", "Tendências Históricas"]
+with c_nav:
+    opcoes_menu = ["Painel Geral", "Mapa Regional", "Vigilância Canina", "Tendências Históricas"]
+    navegacao = st.radio(
+        "Navegação", 
+        opcoes_menu, 
+        horizontal=True,
+        label_visibility="collapsed"
+    )
 
-# Usamos um radio button horizontal para simular abas
-navegacao = st.radio(
-    "", 
-    opcoes_menu, 
-    horizontal=True,
-    label_visibility="collapsed" # Esconde o título do radio
-)
+with c_ano:
+    # Seletor de Ano (Afeta Painel Geral e Mapa)
+    # Só mostramos se houver dados
+    if not df_h.empty:
+        anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
+        ano_sel = st.selectbox("📅 Selecione o Ano:", options=anos, index=0)
+    else:
+        ano_sel = 2025
 
 # -----------------------------------------------------
 # FIX DE SCROLL GLOBAL
-# Atrelado à variável 'navegacao' para resetar scroll ao trocar de aba
-# -----------------------------------------------------
-# -----------------------------------------------------
-# FIX DE SCROLL GLOBAL
-# Truque: Inserimos a variável {navegacao} dentro do HTML (comentário)
-# Isso força o Streamlit a recarregar o script sempre que você muda de aba.
 # -----------------------------------------------------
 components.html(
     f"""
         <script>
-            // Força a rolagem para o topo da janela principal
             window.parent.scrollTo(0, 0);
-            
-            // Tenta encontrar o container principal e rolar também
             var main = window.parent.document.querySelector(".main");
-            var container = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-            
             if (main) {{ main.scrollTop = 0; }}
-            if (container) {{ container.scrollTop = 0; }}
         </script>
         """,
     height=0,
     width=0
 )
 
-# --- 7. CONTEÚDO (LOGICA BASEADA NO NOVO MENU) ---
+# --- 7. CONTEÚDO ---
 
 if navegacao == "Painel Geral":
     st.subheader(f"Visão Consolidada | {ano_sel}")
@@ -495,17 +477,37 @@ elif navegacao == "Mapa Regional":
     """, unsafe_allow_html=True)
 
     if not df_m.empty:
+        # CONTROLES DO GRÁFICO REGIONAL (Regional + Slider de Anos)
+        c_reg, c_slider = st.columns([1, 2])
         lista_regionais = sorted(df_m['Regional'].unique().tolist())
-        reg_sel = st.selectbox("Selecione a Regional:", options=lista_regionais)
         
-        df_reg_hist = df_m[df_m['Regional'] == reg_sel].sort_values('Ano')
+        with c_reg:
+            reg_sel = st.selectbox("Selecione a Regional:", options=lista_regionais)
+        
+        with c_slider:
+            # Slider duplo para selecionar intervalo de anos
+            # Pega o min e max global para os limites do slider
+            intervalo_anos = st.slider(
+                "Filtrar Período (Anos):",
+                min_value=min_ano,
+                max_value=max_ano,
+                value=(min_ano, max_ano) # Valor inicial: tudo selecionado
+            )
+        
+        # Filtra os dados com base na regional E no slider
+        df_reg_hist = df_m[
+            (df_m['Regional'] == reg_sel) & 
+            (df_m['Ano'] >= intervalo_anos[0]) & 
+            (df_m['Ano'] <= intervalo_anos[1])
+        ].sort_values('Ano')
         
         fig_hist_reg = px.line(df_reg_hist, x='Ano', y='Casos', markers=True,
-                               title=f"Evolução dos Casos Humanos: {reg_sel}",
+                               title=f"Evolução dos Casos Humanos: {reg_sel} ({intervalo_anos[0]}-{intervalo_anos[1]})",
                                color_discrete_sequence=['#117733']) 
         fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Lora", font=dict(size=plotly_font))
         
-        fig_hist_reg.update_xaxes(dtick=1, range=[min_ano, max_ano]) 
+        # O eixo X se adapta ao slider
+        fig_hist_reg.update_xaxes(dtick=1, range=[intervalo_anos[0]-0.5, intervalo_anos[1]+0.5]) 
         st.plotly_chart(fig_hist_reg, use_container_width=True)
 
 elif navegacao == "Tendências Históricas":
@@ -555,4 +557,3 @@ elif navegacao == "Tendências Históricas":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
-

@@ -208,7 +208,7 @@ with st.sidebar:
     st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
     st.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
     st.caption(f"Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
-    st.caption(f"O painel apresenta análise descritiva dos dados oficiais, sem inferência causal, utilizando estatística básica e visualização interativa para apoio à vigilância epidemiológica.)
+    st.caption(f"O painel apresenta análise descritiva dos dados oficiais, sem inferência causal, utilizando estatística básica e visualização interativa para apoio à vigilância epidemiológica.")
     st.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")
 
 # --- 6. CABEÇALHO ---
@@ -508,4 +508,5 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 

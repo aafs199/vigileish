@@ -12,18 +12,17 @@ import numpy as np
 logging.basicConfig(level=logging.ERROR)
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="VigiLeish Intelligence Dashboard", layout="wide", page_icon="dog.png")
+st.set_page_config(page_title="VigiLeish Dashboard", layout="wide", page_icon=None)
 
-# --- 2. LOGO E SIDEBAR (AGORA MAIS LIMPA) ---
+# --- 2. LOGO E SIDEBAR (LIMPA E SEM ÍCONES) ---
 with st.sidebar:
-    st.markdown('<div class="sidebar-logo">', unsafe_allow_html=True)
+    # Apenas a imagem do logo
     st.image("dog.png", width=120) 
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("### ⚙️ Preferências")
+    
+    st.markdown("### Preferências")
     
     # --- CONTROLE DE ACESSIBILIDADE ---
-    st.markdown("#### 👁️ Acessibilidade")
+    st.markdown("#### Acessibilidade")
     tamanho_fonte = st.radio(
         "Tamanho do Texto:",
         ["Padrão", "Grande", "Extra Grande"],
@@ -43,18 +42,17 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # CRÉDITOS E LINKS (MANTIDOS NA SIDEBAR)
+    # CRÉDITOS
     st.link_button("Informações Oficiais (PBH)", "https://prefeitura.pbh.gov.br/saude/leishmaniose-visceral-canina", use_container_width=True)
     st.markdown("---")
-    st.caption(f"📅 Atualização: {datetime.now().strftime('%d/%m/%Y')}")
-    st.caption(f"Fonte: DIZO/SUPVISA/SMSA/PBH")
-    st.caption(f"Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
-    st.caption(f"Analista: Aline Alice Ferreira da Silva | RU: 5277514")
+    st.caption(f"Atualização: {datetime.now().strftime('%d/%m/%Y')}")
+    st.caption("Fonte: DIZO/SUPVISA/SMSA/PBH")
+    st.caption("Atividades Extensionistas II - Tecnologia Aplicada à Inclusão Digital - Projeto - UNINTER")
+    st.caption("Analista: Aline Alice Ferreira da Silva | RU: 5277514")
 
 # --- 3. ESTILO CSS DINÂMICO ---
 st.markdown(f"""
     <style>
-    /* Mantendo a fonte Lora conforme pedido */
     @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&display=swap');
     
     html {{ font-size: {css_root} !important; }}
@@ -65,33 +63,47 @@ st.markdown(f"""
     
     [data-testid="stSidebar"] {{ background-color: #f7fcf9 !important; border-right: 1px solid #d1d5db; }}
     
-    /* Estilo dos Selectboxes e Botões */
-    div[data-baseweb="select"] > div {{ background-color: #ffffff !important; border-color: #5D3A9B !important; color: #1e293b !important; }}
-    div.stButton > button, div.stLinkButton > a {{
-        background-color: #ffffff !important; color: #064E3B !important; border: 1px solid #2E7D32 !important; 
-        border-radius: 6px !important; font-weight: 600 !important;
+    /* Estilização dos Botões de Navegação - Sem Ícones, Sóbrio */
+    div.stButton > button {{
+        width: 100%;
+        border-radius: 6px;
+        font-weight: 600;
+        border: 1px solid #064E3B;
+        transition: all 0.3s;
     }}
     
+    /* Botão Secundário (Inativo) */
+    div.stButton > button[kind="secondary"] {{
+        background-color: #ffffff;
+        color: #064E3B;
+    }}
+    
+    /* Botão Primário (Ativo) */
+    div.stButton > button[kind="primary"] {{
+        background-color: #064E3B !important;
+        color: #ffffff !important;
+        border-color: #064E3B !important;
+    }}
+    div.stButton > button:hover {{
+        background-color: #f0fdf4 !important;
+    }}
+
+    /* Selectbox */
+    div[data-baseweb="select"] > div {{ background-color: #ffffff !important; border-color: #5D3A9B !important; color: #1e293b !important; }}
+
+    /* Métricas e Info Box */
     [data-testid="stMetric"] {{
         background-color: #ffffff; padding: 15px; border-radius: 8px;
         border: 1px solid #e2e8f0; border-left: 5px solid #5D3A9B;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }}
-    
     .info-box {{
         background-color: #f0fdf4; border-left: 5px solid #117733; padding: 15px;
         border-radius: 5px; margin-bottom: 20px; color: #1e293b; font-size: 0.95rem;
         line-height: 1.6;
     }}
-    .info-box ul {{
-        list-style-type: none !important;
-        padding-left: 5px !important;
-        margin-top: 10px !important;
-    }}
-    .info-box li {{
-        margin-bottom: 10px !important;
-    }}
-    
+    .info-box ul {{ list-style-type: none !important; padding-left: 5px !important; margin-top: 10px !important; }}
+    .info-box li {{ margin-bottom: 10px !important; }}
     .info-title {{ color: #117733; font-weight: bold; margin-bottom: 8px; display: block; font-size: 1.15rem; }}
 
     .header-container {{
@@ -102,36 +114,20 @@ st.markdown(f"""
     .header-title {{ color: #ffffff !important; font-size: 2.2rem !important; margin: 0 !important; font-weight: 700 !important; }}
     .header-subtitle {{ color: #dcfce7 !important; margin-top: 10px !important; font-size: 1.0rem; font-style: italic; }}
     .sidebar-logo {{ display: flex; justify-content: center; margin-bottom: 20px; }}
-    
-    /* MENU SUPERIOR PERSONALIZADO */
-    div[data-testid="stRadio"] > label {{ display: none; }} 
-    div[role="radiogroup"] {{
-        background-color: #ffffff;
-        padding: 10px;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        justify-content: center;
-    }}
-    /* Ajuste Mobile para o Menu */
-    @media (max-width: 640px) {{
-        div[role="radiogroup"] {{
-            flex-direction: column;
-            gap: 10px;
-        }}
-    }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. CARREGAMENTO DE DADOS ---
+# --- 4. CARREGAMENTO DE DADOS (CORRIGIDO PARA RESTAURAR 1994-2007) ---
 @st.cache_data
 def load_data():
     try:
         # A. HUMANOS
-        df_h_raw = pd.read_csv('dados_novos.csv', skiprows=1, nrows=32, encoding='iso-8859-1', sep=None, engine='python')
+        # Aumentei nrows para 50 para garantir que pegue todas as linhas históricas (1994 em diante)
+        df_h_raw = pd.read_csv('dados_novos.csv', skiprows=1, nrows=50, encoding='iso-8859-1', sep=None, engine='python')
         df_h_raw = df_h_raw.iloc[:, :7]
         df_h_raw.columns = ['Ano', 'Casos', 'Pop', 'Inc', 'Prev', 'Obitos', 'Letalidade']
         df_h_raw['Ano'] = pd.to_numeric(df_h_raw['Ano'], errors='coerce')
-        df_h_raw = df_h_raw.dropna(subset=['Ano'])
+        df_h_raw = df_h_raw.dropna(subset=['Ano']) # Remove linhas vazias, mas mantém anos antigos válidos
         
         # CÁLCULO ESTATÍSTICO (Média + 2DP)
         media_let = df_h_raw['Letalidade'].mean()
@@ -139,6 +135,7 @@ def load_data():
         limiar_letalidade = media_let + (2 * dp_let)
 
         # B. REGIONAIS
+        # Lógica restaurada para o método "posicional" (2006 + i) que funcionava para o arquivo da prefeitura
         df_reg_raw = pd.read_csv('dados_novos.csv', skiprows=39, nrows=11, encoding='iso-8859-1', sep=None, engine='python')
         coords = {
             'Barreiro': [-19.974, -44.022], 'Centro Sul': [-19.933, -43.935], 'Leste': [-19.921, -43.902],
@@ -147,28 +144,19 @@ def load_data():
         }
         regionais_lista = []
         
-        cols = df_reg_raw.columns
-        anos_cols = []
-        for c in cols:
-            try:
-                ano_int = int(str(c).strip())
-                if 1990 <= ano_int <= 2050: 
-                    anos_cols.append(c)
-            except:
-                continue
-
         for index, row in df_reg_raw.iterrows():
             reg_nome = str(row.iloc[0]).strip()
             if reg_nome in coords:
-                for col_ano in anos_cols:
+                # Restaura a lógica original: col 1 = 2007, col 2 = 2008...
+                for i in range(1, len(row)): 
                     try:
-                        ano = int(col_ano)
-                        val = row[col_ano]
+                        ano = 2006 + i 
+                        val = row.iloc[i]
                         val_num = pd.to_numeric(val, errors='coerce')
                         if pd.isna(val_num): val_num = 0
                         
                         regionais_lista.append({
-                            'Regional': reg_nome, 'Ano': ano,
+                            'Regional': reg_nome, 'Ano': int(ano),
                             'Casos': val_num,
                             'Lat': coords[reg_nome][0], 'Lon': coords[reg_nome][1]
                         })
@@ -200,20 +188,22 @@ def load_data():
             df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0)
         df_v_clean = df_v_raw.copy()
 
-        # Ranges
-        min_ano_global = int(df_h_raw['Ano'].min())
+        # RANGES GLOBAIS
+        # Garante que o mínimo seja 1994 ou o menor ano encontrado nos dados humanos
+        min_ano_encontrado = int(df_h_raw['Ano'].min())
+        min_ano_global = min(1994, min_ano_encontrado) # Força visualização a partir de 1994 se disponível
         max_ano_global = int(df_h_raw['Ano'].max())
 
         return df_h_raw, df_mapa, df_c_clean, df_v_clean, limiar_letalidade, min_ano_global, max_ano_global
 
     except Exception as e:
         logging.error(f"ERRO CRÍTICO: {e}")
-        st.warning("⚠️ Instabilidade nos dados.")
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), 10, 2000, 2025
+        st.warning("Instabilidade nos dados.")
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), 10, 1994, 2025
 
 df_h, df_m, df_c, df_v, limiar_stat, min_ano, max_ano = load_data()
 
-# --- 6. CABEÇALHO ---
+# --- 5. CABEÇALHO ---
 st.markdown(f"""
     <div class="header-container">
         <h1 class="header-title">VigiLeish: Painel de Monitoramento</h1>
@@ -222,26 +212,38 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------
-# BARRA DE NAVEGAÇÃO E CONTROLE UNIFICADA
-# Colocamos o Menu (Esq) e o Seletor de Ano (Dir) juntos no topo.
+# BARRA DE NAVEGAÇÃO SUPERIOR (BOTÕES REAIS + ANO)
 # ---------------------------------------------------------------------
-c_nav, c_ano = st.columns([3, 1]) # Proporção: Navegação ocupa mais espaço
+if 'segment' not in st.session_state:
+    st.session_state.segment = "Geral"
 
-with c_nav:
-    opcoes_menu = ["Painel Geral", "Mapa Regional", "Vigilância Canina", "Tendências Históricas"]
-    navegacao = st.radio(
-        "Navegação", 
-        opcoes_menu, 
-        horizontal=True,
-        label_visibility="collapsed"
-    )
+def get_btn_type(btn_name):
+    return "primary" if st.session_state.segment == btn_name else "secondary"
+
+# Layout ajustado
+c1, c2, c3, c4, c_ano = st.columns([1, 1, 1, 1, 1.5])
+
+with c1:
+    if st.button("Painel Geral", type=get_btn_type("Geral"), use_container_width=True):
+        st.session_state.segment = "Geral"
+        st.rerun()
+with c2:
+    if st.button("Mapa", type=get_btn_type("Mapa"), use_container_width=True):
+        st.session_state.segment = "Mapa"
+        st.rerun()
+with c3:
+    if st.button("Canina", type=get_btn_type("Canina"), use_container_width=True):
+        st.session_state.segment = "Canina"
+        st.rerun()
+with c4:
+    if st.button("Histórico", type=get_btn_type("Historico"), use_container_width=True):
+        st.session_state.segment = "Historico"
+        st.rerun()
 
 with c_ano:
-    # Seletor de Ano (Afeta Painel Geral e Mapa)
-    # Só mostramos se houver dados
     if not df_h.empty:
         anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
-        ano_sel = st.selectbox("📅 Selecione o Ano:", options=anos, index=0)
+        ano_sel = st.selectbox("Selecione o Ano:", options=anos, index=0, label_visibility="collapsed")
     else:
         ano_sel = 2025
 
@@ -262,7 +264,7 @@ components.html(
 
 # --- 7. CONTEÚDO ---
 
-if navegacao == "Painel Geral":
+if st.session_state.segment == "Geral":
     st.subheader(f"Visão Consolidada | {ano_sel}")
 
     st.markdown("""
@@ -282,7 +284,7 @@ if navegacao == "Painel Geral":
         <ul>
             <li><strong>Casos Humanos:</strong> Quantas pessoas foram diagnosticadas com leishmaniose no ano selecionado.</li>
             <li><strong>Óbitos:</strong> Número de pessoas que faleceram em decorrência da doença.</li>
-            <li><strong>Letalidade (%):</strong> Indica a gravidade dos casos. Se este número aumenta, significa que a doença está sendo mais fatal. <br><i><b>Nota:</b> Valores acima de {limiar_stat:.1f}% aparecem com alerta em laranja ⚠️ (Cálculo estatístico: Média + 2 Desvios Padrão).</i></li>
+            <li><strong>Letalidade (%):</strong> Indica a gravidade dos casos. Se este número aumenta, significa que a doença está sendo mais fatal. <br><i><b>Nota:</b> Valores acima de {limiar_stat:.1f}% aparecem com alerta em laranja (Cálculo estatístico: Média + 2 Desvios Padrão).</i></li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -295,7 +297,7 @@ if navegacao == "Painel Geral":
         letalidade = dh['Letalidade'].iloc[0]
         if letalidade >= limiar_stat:
             cor_borda = "#C2410C" 
-            icone = "⚠️ ALTA"
+            icone = "ALTA"
             cor_texto = "#C2410C"
         else:
             cor_borda = "#1e293b"
@@ -358,7 +360,7 @@ if navegacao == "Painel Geral":
         col8.metric("Imóveis Borrifados", f"{int(dv['Borrifados'].iloc[0]):,}".replace(',', '.'))
     else: col8.metric("Imóveis Borrifados", "0")
 
-elif navegacao == "Vigilância Canina":
+elif st.session_state.segment == "Canina":
     st.subheader("Vigilância Canina e Controle Vetorial")
 
     # --- PARTE 1: BARRAS ---
@@ -384,6 +386,7 @@ elif navegacao == "Vigilância Canina":
                           title="Casos Positivos e Eutanásias em Cães",
                           legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center"))
     
+    # Range dinâmico e seguro
     fig_bar.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9', title_text="Qtd. Animais")
     fig_bar.update_xaxes(dtick=1, range=[min_ano-0.5, max_ano+0.5], title_text="Ano")
     st.plotly_chart(fig_bar, use_container_width=True)
@@ -431,7 +434,7 @@ elif navegacao == "Vigilância Canina":
     fig_v.update_xaxes(dtick=1, range=[min_ano, max_ano])
     st.plotly_chart(fig_v, use_container_width=True)
 
-elif navegacao == "Mapa Regional":
+elif st.session_state.segment == "Mapa":
     st.subheader(f"Distribuição Geográfica | {ano_sel}")
 
     st.markdown("""
@@ -486,12 +489,11 @@ elif navegacao == "Mapa Regional":
         
         with c_slider:
             # Slider duplo para selecionar intervalo de anos
-            # Pega o min e max global para os limites do slider
             intervalo_anos = st.slider(
                 "Filtrar Período (Anos):",
                 min_value=min_ano,
                 max_value=max_ano,
-                value=(min_ano, max_ano) # Valor inicial: tudo selecionado
+                value=(min_ano, max_ano)
             )
         
         # Filtra os dados com base na regional E no slider
@@ -510,7 +512,7 @@ elif navegacao == "Mapa Regional":
         fig_hist_reg.update_xaxes(dtick=1, range=[intervalo_anos[0]-0.5, intervalo_anos[1]+0.5]) 
         st.plotly_chart(fig_hist_reg, use_container_width=True)
 
-elif navegacao == "Tendências Históricas":
+elif st.session_state.segment == "Historico":
     st.subheader("Análise de Tendência: Humanos vs Caninos")
 
     st.markdown("""

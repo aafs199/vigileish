@@ -62,7 +62,6 @@ st.markdown(f"""
     
     [data-testid="stSidebar"] {{ background-color: #f7fcf9 !important; border-right: 1px solid #d1d5db; }}
     
-    /* Botões de Navegação Sóbrios */
     div.stButton > button {{
         width: 100%;
         border-radius: 6px;
@@ -70,12 +69,10 @@ st.markdown(f"""
         border: 1px solid #064E3B;
         transition: all 0.3s;
     }}
-    
     div.stButton > button[kind="secondary"] {{
         background-color: #ffffff;
         color: #064E3B;
     }}
-    
     div.stButton > button[kind="primary"] {{
         background-color: #064E3B !important;
         color: #ffffff !important;
@@ -136,7 +133,6 @@ def load_data():
             'Oeste': [-19.952, -43.984], 'Pampulha': [-19.855, -43.971], 'Venda Nova': [-19.812, -43.955]
         }
         regionais_lista = []
-        
         for index, row in df_reg_raw.iterrows():
             reg_nome = str(row.iloc[0]).strip()
             if reg_nome in coords:
@@ -160,13 +156,9 @@ def load_data():
         for col in df_c_raw.columns:
             df_c_raw[col] = df_c_raw[col].str.strip().str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
             df_c_raw[col] = pd.to_numeric(df_c_raw[col], errors='coerce').fillna(0)
-        
         df_c_raw['Ano'] = df_c_raw['Ano'].astype(int)
         df_c_clean = df_c_raw.copy()
-        df_c_clean['Taxa_Positividade'] = np.where(
-            df_c_clean['Sorologias'] > 0,
-            (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100), 0
-        )
+        df_c_clean['Taxa_Positividade'] = np.where(df_c_clean['Sorologias'] > 0, (df_c_clean['Positivos'] / df_c_clean['Sorologias'] * 100), 0)
 
         # D. VETOR
         df_v_raw = pd.read_csv('vetor.csv', sep=';', encoding='iso-8859-1', dtype=str)
@@ -175,7 +167,6 @@ def load_data():
         for col in df_v_raw.columns:
             df_v_raw[col] = df_v_raw[col].str.strip().str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
             df_v_raw[col] = pd.to_numeric(df_v_raw[col], errors='coerce').fillna(0)
-        
         df_v_raw['Ano'] = df_v_raw['Ano'].astype(int)
         df_v_clean = df_v_raw.copy()
 
@@ -186,8 +177,7 @@ def load_data():
         return df_h_raw, df_mapa, df_c_clean, df_v_clean, limiar_letalidade, min_ano_global, max_ano_global
 
     except Exception as e:
-        logging.error(f"ERRO CRÍTICO: {e}")
-        st.warning("Instabilidade nos dados.")
+        logging.error(f"ERRO: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), 10, 1994, 2025
 
 df_h, df_m, df_c, df_v, limiar_stat, min_ano, max_ano = load_data()
@@ -201,25 +191,28 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------
-# BARRA DE NAVEGAÇÃO E FILTROS COM PERSISTÊNCIA DE DADOS
+# GESTÃO DE ESTADO (MEMÓRIA)
 # ---------------------------------------------------------------------
 
-# 1. Inicializa o estado de navegação
+# 1. Navegação
 if 'segment' not in st.session_state:
     st.session_state.segment = "Geral"
 
-# 2. Inicializa o estado do ANO SELECIONADO (Global)
-# Se não houver ano salvo, define como o ano mais recente disponível
-if 'ano_global' not in st.session_state:
+# 2. Ano Selecionado (Persistência)
+# Garante que 'ano_selecionado' exista no session_state
+if 'ano_selecionado' not in st.session_state:
     if not df_h.empty:
-        st.session_state.ano_global = int(df_h['Ano'].max())
+        # Define o ano mais recente como padrão inicial
+        st.session_state.ano_selecionado = int(df_h['Ano'].max())
     else:
-        st.session_state.ano_global = 2025
+        st.session_state.ano_selecionado = 2025
 
+# ---------------------------------------------------------------------
+# BARRA DE NAVEGAÇÃO E FILTRO
+# ---------------------------------------------------------------------
 def get_btn_type(btn_name):
     return "primary" if st.session_state.segment == btn_name else "secondary"
 
-# Layout: Botões + Filtro de Ano
 c1, c2, c3, c4, c_ano = st.columns([1, 1, 1, 1, 1.5])
 
 with c1:
@@ -241,21 +234,33 @@ with c4:
 
 with c_ano:
     if not df_h.empty:
-        anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
-        # O SEGMENTO DE OURO: key="ano_global"
-        # Isso liga o selectbox diretamente à memória do Streamlit.
-        # Quando você muda de aba, o Streamlit lembra o valor de "ano_global".
-        st.selectbox(
-            "Selecione o Ano:",
-            options=anos,
-            key="ano_global", 
+        lista_anos = sorted(df_h['Ano'].unique().tolist(), reverse=True)
+        
+        # Encontra o índice do ano que está salvo na memória
+        try:
+            indice_atual = lista_anos.index(st.session_state.ano_selecionado)
+        except ValueError:
+            indice_atual = 0 # Se der erro (ano não existe), pega o primeiro
+            
+        # O Selectbox atualiza DIRETAMENTE o 'ano_selecionado' no session_state através da key
+        sel = st.selectbox(
+            "Selecione o Ano:", 
+            options=lista_anos, 
+            index=indice_atual, # Força o valor visual a ser o que está na memória
+            key="ano_widget",   # Nome interno do widget
             label_visibility="collapsed"
         )
+        
+        # Sincronização: Se o widget mudou, atualiza a variável principal
+        if sel != st.session_state.ano_selecionado:
+            st.session_state.ano_selecionado = sel
+            st.rerun() # Recarrega para aplicar o filtro
+            
     else:
-        st.session_state.ano_global = 2025 # Fallback
+        st.session_state.ano_selecionado = 2025
 
-# Variável auxiliar para facilitar o uso no código abaixo
-ano_sel = st.session_state.ano_global
+# Variável final para uso nos gráficos
+ano_sel = st.session_state.ano_selecionado
 
 # -----------------------------------------------------
 # FIX DE SCROLL
@@ -301,35 +306,28 @@ if st.session_state.segment == "Geral":
 
     col1, col2, col3 = st.columns(3)
     if not dh.empty:
-        # Verifica se há dados para o ano, senão mostra 0
-        casos = int(dh['Casos'].iloc[0]) if not dh['Casos'].empty else 0
-        obitos = int(dh['Obitos'].iloc[0]) if not dh['Obitos'].empty else 0
+        col1.metric("Casos Humanos", f"{int(dh['Casos'].iloc[0])}")
+        col2.metric("Óbitos", f"{int(dh['Obitos'].iloc[0])}")
         
-        col1.metric("Casos Humanos", f"{casos}")
-        col2.metric("Óbitos", f"{obitos}")
-        
-        if not dh['Letalidade'].empty:
-            letalidade = dh['Letalidade'].iloc[0]
-            if letalidade >= limiar_stat:
-                cor_borda = "#C2410C" 
-                icone = "ALTA"
-                cor_texto = "#C2410C"
-            else:
-                cor_borda = "#1e293b"
-                icone = "Estável"
-                cor_texto = "#1e293b"
-
-            col3.markdown(f"""
-                <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; border-left: 6px solid {cor_borda};">
-                    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 5px; font-family: 'Lora', serif;">Letalidade</p>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <p style="color: {cor_texto}; font-size: 1.8rem; font-weight: 700; margin: 0; font-family: 'Lora', serif;">{letalidade:.1f}%</p>
-                        <span style="font-size: 0.9rem; font-weight: bold; color: {cor_texto}; background: #fff3e0; padding: 2px 6px; border-radius: 4px;">{icone}</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+        letalidade = dh['Letalidade'].iloc[0]
+        if letalidade >= limiar_stat:
+            cor_borda = "#C2410C" 
+            icone = "ALTA"
+            cor_texto = "#C2410C"
         else:
-            col3.metric("Letalidade", "0%")
+            cor_borda = "#1e293b"
+            icone = "Estável"
+            cor_texto = "#1e293b"
+
+        col3.markdown(f"""
+            <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; border-left: 6px solid {cor_borda};">
+                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 5px; font-family: 'Lora', serif;">Letalidade</p>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <p style="color: {cor_texto}; font-size: 1.8rem; font-weight: 700; margin: 0; font-family: 'Lora', serif;">{letalidade:.1f}%</p>
+                    <span style="font-size: 0.9rem; font-weight: bold; color: {cor_texto}; background: #fff3e0; padding: 2px 6px; border-radius: 4px;">{icone}</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
     else:
         col1.metric("Casos Humanos", "0"); col2.metric("Óbitos", "0"); col3.metric("Letalidade", "0%")
 
@@ -403,7 +401,6 @@ elif st.session_state.segment == "Canina":
                           title="Casos Positivos e Eutanásias em Cães",
                           legend=dict(orientation="h", y=1.15, x=0.5, xanchor="center"))
     
-    # Range dinâmico
     fig_bar.update_yaxes(tickformat=".,d", gridcolor='#f1f5f9', title_text="Qtd. Animais")
     fig_bar.update_xaxes(dtick=1, range=[min_ano-0.5, max_ano+0.5], title_text="Ano")
     st.plotly_chart(fig_bar, use_container_width=True)
@@ -497,18 +494,14 @@ elif st.session_state.segment == "Mapa":
     """, unsafe_allow_html=True)
 
     if not df_m.empty:
-        # CONTROLES DO GRÁFICO REGIONAL (Regional + Slider de Anos)
         c_reg, c_slider = st.columns([1, 2])
         lista_regionais = sorted(df_m['Regional'].unique().tolist())
-        
-        # Definição do ano mínimo para o slider deste gráfico específico (Dados regionais começam em 2007)
         min_ano_regional = 2007
         
         with c_reg:
             reg_sel = st.selectbox("Selecione a Regional:", options=lista_regionais)
         
         with c_slider:
-            # Slider duplo ajustado para 2007-2025
             intervalo_anos = st.slider(
                 "Filtrar Período (Anos):",
                 min_value=min_ano_regional,
@@ -516,7 +509,6 @@ elif st.session_state.segment == "Mapa":
                 value=(min_ano_regional, max_ano)
             )
         
-        # Filtra os dados com base na regional E no slider
         df_reg_hist = df_m[
             (df_m['Regional'] == reg_sel) & 
             (df_m['Ano'] >= intervalo_anos[0]) & 
@@ -527,8 +519,6 @@ elif st.session_state.segment == "Mapa":
                                title=f"Evolução dos Casos Humanos: {reg_sel} ({intervalo_anos[0]}-{intervalo_anos[1]})",
                                color_discrete_sequence=['#117733']) 
         fig_hist_reg.update_layout(plot_bgcolor='white', font_family="Lora", font=dict(size=plotly_font))
-        
-        # O eixo X se adapta ao slider
         fig_hist_reg.update_xaxes(dtick=1, range=[intervalo_anos[0]-0.5, intervalo_anos[1]+0.5]) 
         st.plotly_chart(fig_hist_reg, use_container_width=True)
 

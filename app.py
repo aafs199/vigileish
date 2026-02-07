@@ -63,32 +63,6 @@ st.markdown(f"""
     
     [data-testid="stSidebar"] {{ background-color: #f7fcf9 !important; border-right: 1px solid #d1d5db; }}
 
-    /* --- SIDEBAR --- */
-    
-    button[kind="header"] {{
-        width: 3rem !important;
-        height: 3rem !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        /* Esconde o SVG da seta padrão */
-        & > svg {{
-            display: none !important;
-        }}
-    }}
-    /* Cria o ícone de hambúrguer usando pseudo-elemento */
-    button[kind="header"]::before {{
-        content: '' !important;
-        display: block !important;
-        width: 1.5rem !important;
-        height: 0.2rem !important;
-        /* Cor das barras (usando a cor do texto do tema) */
-        background-color: #1e293b !important; 
-        border-radius: 0.25rem !important;
-        /* Cria as duas outras barras usando box-shadow */
-        box-shadow: 0 0.5rem 0 #1e293b, 0 -0.5rem 0 #1e293b !important;
-    }}
-    /* -------------------------------------------------- */
     div.stButton > button {{
         width: 100%;
         border-radius: 6px;
@@ -592,5 +566,6 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 

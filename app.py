@@ -383,7 +383,7 @@ elif st.session_state.segment == "Canina":
         <br><br>
         <b>Guia visual do gráfico:</b>
         <ul>
-            <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas:</span> <strong>Cães Positivos</strong> Cães que foram confirmados com a doença.</li>
+            <li><span style='color:#C2410C; font-weight:bold;'>■ Barras Laranjas:</span> <strong>Cães Positivos: </strong> Número de animais que foram confirmados com a doença.</li>
             <li><span style='color:#5D3A9B; font-weight:bold;'>■ Barras Roxas:</span> <strong>Eutanásias:</strong> Medida de saúde pública para controle de reservatório. <br><i>(<b>Nota:</b> Embora controversa, é a medida técnica oficial vigente para interrupção do ciclo de transmissão em massa).</i>
         </ul>
     </div>
@@ -566,6 +566,7 @@ elif st.session_state.segment == "Historico":
     fig.update_yaxes(title_text="Casos Humanos", tickformat=".,d", secondary_y=True, showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
 
 
 
